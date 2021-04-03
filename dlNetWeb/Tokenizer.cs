@@ -7,7 +7,7 @@ namespace dlNetWeb
     public class Tokenizer
     {
         public bool ParserPause { get; set; }
-        private readonly string _content;
+        private ReadOnlyMemory<char> _memory;
         private int readPosition;
 
         private Tokens.State state = Tokens.State.Data;
@@ -15,7 +15,7 @@ namespace dlNetWeb
 
         public Tokenizer(string content)
         {
-            _content = content;
+            _memory = content?.AsMemory() ?? ReadOnlyMemory<char>.Empty;
         }
 
         public void Run()
@@ -26,12 +26,12 @@ namespace dlNetWeb
                 case Tokens.State.Data:
                     if (!currentInputCharacter.IsEmpty)
                     {
-                        if (currentInputCharacter[0] == '&')
+                        if (currentInputCharacter.Span[0] == '&')
                         {
                             var returnState = Tokens.State.Data;
                             // Switch state to CharacterReference
                         }
-                        else if (currentInputCharacter[0] == '<')
+                        else if (currentInputCharacter.Span[0] == '<')
                         {
                             // Switch state to TagOpen
                         }
@@ -40,7 +40,7 @@ namespace dlNetWeb
                 case Tokens.State.TagOpen:
                     if (!currentInputCharacter.IsEmpty)
                     {
-                        if (currentInputCharacter[0] == '!')
+                        if (currentInputCharacter.Span[0] == '!')
                         {
                             // Switch state to Markup
                         }
@@ -54,11 +54,11 @@ namespace dlNetWeb
             }
         }
 
-        private ReadOnlySpan<char> OnNextChar(int start, int length = 1)
+        private ReadOnlyMemory<char> OnNextChar(int start, int length = 1)
         {
-            if (string.IsNullOrWhiteSpace(_content))
-                return ReadOnlySpan<char>.Empty;
-            return _content.AsSpan().Slice(start, length);
+            if (_memory.IsEmpty)
+                return ReadOnlyMemory<char>.Empty;
+            return _memory.Slice(start, length);
         }
     }
 }
