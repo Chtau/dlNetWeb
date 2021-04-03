@@ -11,6 +11,8 @@ namespace dlNetWeb.Test
         public void Tokenizer()
         {
             var file = System.IO.File.ReadAllText(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "TestFiles", "simple.html"));
+            var tokenizer = new Tokenizer(file);
+            tokenizer.Run();
         }
     }
 }
