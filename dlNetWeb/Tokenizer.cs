@@ -47,24 +47,102 @@ namespace dlNetWeb
                             else if (currentInputCharacter.Span[0] == '<')
                             {
                                 // Switch state to TagOpen
+                                state = Tokens.State.TagOpen;
+                                break;
                             }
                         } else
                         {
                             exitLoop = true;
                         }
                         break;
-                    /*case Tokens.State.TagOpen:
+                    case Tokens.State.TagOpen:
+                        currentInputCharacter = OnNextChar(readPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
                             if (currentInputCharacter.Span[0] == '!')
                             {
-                                // Switch state to Markup
+                                state = Tokens.State.MarkupDeclarationOpen;
+                                break;
+                            }
+                        } else
+                        {
+                            exitLoop = true;
+                        }
+                        break;
+                    case Tokens.State.MarkupDeclarationOpen:
+                        if (OnNextChar(readPosition, 2).ToString() == "--")
+                        {
+                            readPosition += 2;
+                            currentToken = new Tokens.CommantToken
+                            {
+                                Value = string.Empty
+                            };
+                            state = Tokens.State.CommentStart;
+                        } else if (string.Equals("DOCTYPE", OnNextChar(readPosition, 7).ToString(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            readPosition += 7;
+                            state = Tokens.State.DOCTYPE;
+                        } else if (string.Equals("[CDATA[", OnNextChar(readPosition, 7)))
+                        {
+                            readPosition += 7;
+                            // TODO: handle CDATA
+                        } else
+                        {
+                            // parse error for "incorrectly-opened-comment"
+                            currentToken = new Tokens.CommantToken
+                            {
+                                Value = string.Empty
+                            };
+                            state = Tokens.State.BogusComment;
+                        }
+                        break;
+                    case Tokens.State.DOCTYPE:
+                        currentInputCharacter = OnNextChar(readPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.Span[0] == '\u0009'
+                                || currentInputCharacter.Span[0] == '\u000A'
+                                || currentInputCharacter.Span[0] == '\u000C'
+                                || currentInputCharacter.Span[0] == '\u0020')
+                            {
+                                state = Tokens.State.BeforeDOCTYPEName;
+                            } else if (currentInputCharacter.Span[0] == '>')
+                            {
+                                state = Tokens.State.BeforeDOCTYPEName;
+                                readPosition--;
+                            } else
+                            {
+                                //  parse error for "missing-whitespace-before-doctype-name"
+                                state = Tokens.State.BeforeDOCTYPEName;
+                                readPosition--;
+                            }
+                        } else
+                        {
+                            EmitToken?.Invoke(this, new Tokens.DOCTYPEToken
+                            {
+                                ForceQuirks = true
+                            });
+                            EmitToken?.Invoke(this, new Tokens.EndOfFileToken());
+                            exitLoop = true;
+                        }
+                        break;
+                    case Tokens.State.BeforeDOCTYPEName:
+                        currentInputCharacter = OnNextChar(readPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.Span[0] == '\u0009'
+                                || currentInputCharacter.Span[0] == '\u000A'
+                                || currentInputCharacter.Span[0] == '\u000C'
+                                || currentInputCharacter.Span[0] == '\u0020')
+                            {
+                                // ignore character
                             }
                         }
-                    break;
-                case Tokens.State.MarkupDeclarationOpen:
-                    // peak ahead for "DOCTYPE"
-                    break;*/
+                        else
+                        {
+                            exitLoop = true;
+                        }
+                        break;
                     case Tokens.State.CharacterReference:
                         temporaryBuffer = string.Empty;
                         currentInputCharacter = OnNextChar(readPosition++);
