@@ -14,11 +14,5 @@ namespace dlNetWeb.Test
             var tokenizer = new Tokenizer(file);
             tokenizer.Run();
         }
-
-        [Fact]
-        public void ReadNamedCharacterREferenceFile()
-        {
-            //Newtonsoft.Json.JsonConvert.DeserializeObject(Path.)
-        }
     }
 }

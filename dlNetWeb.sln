@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31112.23
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dlNetWeb", "dlNetWeb\dlNetWeb.csproj", "{4C17666C-393F-4B8F-A3DB-F12BE45C06D1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dlNetWeb", "dlNetWeb\dlNetWeb.csproj", "{4C17666C-393F-4B8F-A3DB-F12BE45C06D1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dlNetWeb.Test", "dlNetWeb.Test\dlNetWeb.Test.csproj", "{FFDAF5F9-7BCE-4141-BA50-22587E6A9688}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dlNetWeb.Test", "dlNetWeb.Test\dlNetWeb.Test.csproj", "{FFDAF5F9-7BCE-4141-BA50-22587E6A9688}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

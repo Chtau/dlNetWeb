@@ -4,12 +4,7 @@ using System.Text;
 
 namespace dlNetWeb.Models
 {
-    public class NamedCharacterReferenceData
-    {
-        public string Name { get; set; }
-    }
-
-    public class NamedCharacterReferenceCodepointData
+    public class NamedCharacterReferenceCodepointModel
     {
         public string Characters { get; set; }
         public int[] Codepoints { get; set; }
