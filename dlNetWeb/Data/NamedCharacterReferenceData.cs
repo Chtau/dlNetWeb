@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace dlNetWeb.Data
 {
@@ -9,6 +10,8 @@ namespace dlNetWeb.Data
     /// </summary>
     public class NamedCharacterReferenceData
     {
+        public int MaxKeyLength { get; }
+
         public Dictionary<string, Models.NamedCharacterReferenceCodepointModel> Entities { get; set; } = new Dictionary<string, Models.NamedCharacterReferenceCodepointModel>();
 
         public NamedCharacterReferenceData()
@@ -11168,6 +11171,12 @@ namespace dlNetWeb.Data
                 Codepoints = new[] { 8204 },
                 Characters = "\u200C"
             });
+            MaxKeyLength = Entities.Keys.Max(x => x.Length);
+        }
+
+        public string HasMatchingKeys(string value)
+        {
+            return Entities.Keys.FirstOrDefault(x => x.StartsWith(value));
         }
     }
 }

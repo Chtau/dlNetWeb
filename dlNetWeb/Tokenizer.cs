@@ -7,6 +7,8 @@ namespace dlNetWeb
 {
     public class Tokenizer
     {
+        private readonly Data.NamedCharacterReferenceData _namedCharacterReference = new Data.NamedCharacterReferenceData();
+
         public bool ParserPause { get; set; }
         private ReadOnlyMemory<char> _memory;
         private int readPosition = 0;
@@ -14,6 +16,7 @@ namespace dlNetWeb
         private Tokens.State state = Tokens.State.Data;
         private Tokens.State returnState = Tokens.State.Data;
         private string temporaryBuffer = null;
+        private bool consumeAsAttribute = false;
 
         public Tokenizer(string content)
         {
@@ -78,7 +81,44 @@ namespace dlNetWeb
                         }
                         break;
                     case Tokens.State.NamedCharacterReference:
-                        temporaryBuffer += currentInputCharacter.Span[0];
+                        string namedChar = string.Empty + currentInputCharacter.Span[0];
+                        //temporaryBuffer += namedChar;
+                        if (!consumeAsAttribute)
+                        {
+                            // peak till no match for a key in _namedCharacterReference
+                            string matchKey = null;
+                            for (int i = 1; i < _namedCharacterReference.MaxKeyLength; i++)
+                            {
+                                var match = _namedCharacterReference.HasMatchingKeys(namedChar);
+                                if (string.IsNullOrWhiteSpace(match))
+                                    break;
+                                else
+                                {
+                                    matchKey = match;
+                                    namedChar += OnNextChar(readPosition + 1, 1 + i);
+                                }
+                            }
+                            if (matchKey.Length > 0)
+                            {
+                                if (matchKey[^1] != ';')
+                                {
+                                    // set parse error for "missing-semicolon-after-character-reference"
+                                }
+                                // append characters from key to buffer
+                                temporaryBuffer += _namedCharacterReference.Entities[matchKey].Characters;
+                                // mark as consumed
+                                readPosition += matchKey.Length - 1; // -1 because & was already consumed
+                                state = returnState;
+                                break;
+                            } else
+                            {
+                                temporaryBuffer += currentInputCharacter.Span[0];
+                                state = Tokens.State.AmbiguousAmpersand;
+                                break;
+                            }
+                        }
+                        break;
+                    case Tokens.State.AmbiguousAmpersand:
                         break;
                     default:
                         break;
