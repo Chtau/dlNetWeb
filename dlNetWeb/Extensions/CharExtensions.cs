@@ -11,7 +11,8 @@ namespace dlNetWeb.Extensions
 
         public static bool IsAlphaNumeric(this char character)
         {
-            return alphanumericRegex.IsMatch(character.ToString());
+            return Char.IsLetterOrDigit(character);
+            //return alphanumericRegex.IsMatch(character.ToString());
         }
     }
 }

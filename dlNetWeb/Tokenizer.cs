@@ -7,9 +7,10 @@ namespace dlNetWeb
 {
     public class Tokenizer
     {
+        public event EventHandler<Tokens.BaseToken> EmitToken;
+
         private readonly Data.NamedCharacterReferenceData _namedCharacterReference = new Data.NamedCharacterReferenceData();
 
-        public bool ParserPause { get; set; }
         private ReadOnlyMemory<char> _memory;
         private int readPosition = 0;
 
@@ -17,6 +18,7 @@ namespace dlNetWeb
         private Tokens.State returnState = Tokens.State.Data;
         private string temporaryBuffer = null;
         private bool consumeAsAttribute = false;
+        private Tokens.BaseToken currentToken;
 
         public Tokenizer(string content)
         {
@@ -65,7 +67,6 @@ namespace dlNetWeb
                     break;*/
                     case Tokens.State.CharacterReference:
                         temporaryBuffer = string.Empty;
-                        temporaryBuffer += '&';
                         currentInputCharacter = OnNextChar(readPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
@@ -73,6 +74,16 @@ namespace dlNetWeb
                             {
                                 // Reconsume in the named character reference state.
                                 state = Tokens.State.NamedCharacterReference;
+                            } else if (currentInputCharacter.Span[0] == '#')
+                            {
+                                temporaryBuffer += currentInputCharacter.Span[0];
+                                state = Tokens.State.NumericCharacterReference;
+                                break;
+                            } else
+                            {
+                                readPosition--;
+                                state = returnState;
+                                break;
                             }
                         }
                         else
@@ -119,7 +130,69 @@ namespace dlNetWeb
                         }
                         break;
                     case Tokens.State.AmbiguousAmpersand:
+                        currentInputCharacter = OnNextChar(readPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.Span[0].IsAlphaNumeric())
+                            {
+                                EmitToken?.Invoke(this, new Tokens.CharacterToken
+                                {
+                                    Value = currentInputCharacter.ToString()
+                                });
+                                break;
+                            } else if (currentInputCharacter.Span[0] == ';')
+                            {
+                                // parse error for "unknown-named-character-reference"
+                            }
+                            state = returnState;
+                            readPosition--; // reconsume in return
+                            break;
+                        }
+                        else
+                        {
+                            exitLoop = true;
+                        }
                         break;
+                    case Tokens.State.NumericCharacterReference:
+                        if (Char.IsLetter(currentInputCharacter.Span[0]))
+                        {
+                            temporaryBuffer += currentInputCharacter.Span[0];
+                            state = Tokens.State.HexadecimalCharacterReferenceStart;
+                            break;
+                        } else
+                        {
+                            state = Tokens.State.DecimalCharacterReferenceStart;
+                            readPosition--;
+                            break;
+                        }
+                    case Tokens.State.HexadecimalCharacterReferenceStart:
+                        currentInputCharacter = OnNextChar(readPosition++);
+                        if (Char.IsLetter(currentInputCharacter.Span[0]))
+                        {
+                            state = Tokens.State.HexadecimalCharacterReference;
+                            readPosition--;
+                            break;
+                        } else
+                        {
+                            //  parse error for "absence-of-digits-in-numeric-character-reference"
+                            state = returnState;
+                            readPosition--;
+                            break;
+                        }
+                    case Tokens.State.DecimalCharacterReferenceStart:
+                        currentInputCharacter = OnNextChar(readPosition++);
+                        if (Char.IsDigit(currentInputCharacter.Span[0]))
+                        {
+                            state = Tokens.State.DecimalCharacterReference;
+                            readPosition--;
+                            break;
+                        } else
+                        {
+                            // parse error for "absence-of-digits-in-numeric-character-reference"
+                            state = returnState;
+                            readPosition--;
+                            break;
+                        }
                     default:
                         break;
                 }
