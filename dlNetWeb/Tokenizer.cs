@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using dlNetWeb.Extensions;
 
 namespace dlNetWeb
 {
@@ -8,10 +9,11 @@ namespace dlNetWeb
     {
         public bool ParserPause { get; set; }
         private ReadOnlyMemory<char> _memory;
-        private int readPosition;
+        private int readPosition = 0;
 
         private Tokens.State state = Tokens.State.Data;
         private Tokens.State returnState = Tokens.State.Data;
+        private string temporaryBuffer = null;
 
         public Tokenizer(string content)
         {
@@ -20,38 +22,68 @@ namespace dlNetWeb
 
         public void Run()
         {
-            var currentInputCharacter = OnNextChar(readPosition);
-            switch (state)
+            bool exitLoop = false;
+            ReadOnlyMemory<char> currentInputCharacter = ReadOnlyMemory<char>.Empty;
+            do
             {
-                case Tokens.State.Data:
-                    if (!currentInputCharacter.IsEmpty)
-                    {
-                        if (currentInputCharacter.Span[0] == '&')
+                switch (state)
+                {
+                    case Tokens.State.Data:
+                        currentInputCharacter = OnNextChar(readPosition++);
+                        if (!currentInputCharacter.IsEmpty)
                         {
-                            var returnState = Tokens.State.Data;
-                            // Switch state to CharacterReference
-                        }
-                        else if (currentInputCharacter.Span[0] == '<')
+                            if (currentInputCharacter.Span[0] == '&')
+                            {
+                                returnState = Tokens.State.Data;
+                                // Switch state to CharacterReference
+                                state = Tokens.State.CharacterReference;
+                                break;
+                            }
+                            else if (currentInputCharacter.Span[0] == '<')
+                            {
+                                // Switch state to TagOpen
+                            }
+                        } else
                         {
-                            // Switch state to TagOpen
+                            exitLoop = true;
                         }
-                    }
-                    break;
-                case Tokens.State.TagOpen:
-                    if (!currentInputCharacter.IsEmpty)
-                    {
-                        if (currentInputCharacter.Span[0] == '!')
+                        break;
+                    /*case Tokens.State.TagOpen:
+                        if (!currentInputCharacter.IsEmpty)
                         {
-                            // Switch state to Markup
+                            if (currentInputCharacter.Span[0] == '!')
+                            {
+                                // Switch state to Markup
+                            }
                         }
-                    }
                     break;
                 case Tokens.State.MarkupDeclarationOpen:
                     // peak ahead for "DOCTYPE"
-                    break;
-                default:
-                    break;
-            }
+                    break;*/
+                    case Tokens.State.CharacterReference:
+                        temporaryBuffer = string.Empty;
+                        temporaryBuffer += '&';
+                        currentInputCharacter = OnNextChar(readPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.Span[0].IsAlphaNumeric())
+                            {
+                                // Reconsume in the named character reference state.
+                                state = Tokens.State.NamedCharacterReference;
+                            }
+                        }
+                        else
+                        {
+                            exitLoop = true;
+                        }
+                        break;
+                    case Tokens.State.NamedCharacterReference:
+                        temporaryBuffer += currentInputCharacter.Span[0];
+                        break;
+                    default:
+                        break;
+                }
+            } while (!exitLoop);
         }
 
         private ReadOnlyMemory<char> OnNextChar(int start, int length = 1)
