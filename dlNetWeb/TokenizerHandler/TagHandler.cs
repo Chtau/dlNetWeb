@@ -39,14 +39,14 @@ namespace dlNetWeb.TokenizerHandler
                             }
                             else if (currentInputCharacter.Span[0] == '?')
                             {
-                                // unexpected-question-mark-instead-of-tag-name parse error
+                                state.Error = ParseError.UnexpectedQuestionMarkInsteadOfTagName;
                                 state.Token = new Tokens.CommantToken { Value = string.Empty };
                                 data.ReadPosition--;
                                 state.State = Tokens.State.BogusComment;
                             }
                             else
                             {
-                                // invalid-first-character-of-tag-name parse error
+                                state.Error = ParseError.InvalidFirstCharacterOfTagName;
                                 OnEmitToken(new Tokens.CharacterToken { Value = '<'.ToString() });
                                 data.ReadPosition--;
                                 state.State = Tokens.State.Data;
@@ -54,7 +54,7 @@ namespace dlNetWeb.TokenizerHandler
                         }
                         else
                         {
-                            // eof-before-tag-name parse error
+                            state.Error = ParseError.EofBeforeTagName;
                             OnEmitToken(new Tokens.CharacterToken { Value = '<'.ToString() });
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
@@ -76,12 +76,12 @@ namespace dlNetWeb.TokenizerHandler
                             }
                             else if (currentInputCharacter.Span[0] == '>')
                             {
-                                //  missing-end-tag-name parse error
+                                state.Error = ParseError.MissingEndTagName;
                                 state.State = Tokens.State.Data;
                             }
                             else
                             {
-                                // invalid-first-character-of-tag-name parse error
+                                state.Error = ParseError.InvalidFirstCharacterOfTagName;
                                 state.Token = new Tokens.CommantToken { Value = string.Empty };
                                 data.ReadPosition--;
                                 state.State = Tokens.State.BogusComment;
@@ -89,7 +89,7 @@ namespace dlNetWeb.TokenizerHandler
                         }
                         else
                         {
-                            //  eof-before-tag-name parse error
+                            state.Error = ParseError.EofBeforeTagName;
                             OnEmitToken(new Tokens.CharacterToken { Value = '<'.ToString() });
                             OnEmitToken(new Tokens.CharacterToken { Value = '/'.ToString() });
                             OnEmitToken(new Tokens.EndOfFileToken());
@@ -119,7 +119,7 @@ namespace dlNetWeb.TokenizerHandler
                                 Token.TagName += currentInputCharacter.Span[0].ToString().ToLower();
                             } else if (currentInputCharacter.Span[0] == '\u0000')
                             {
-                                // unexpected-null-character parse error
+                                state.Error = ParseError.UnexpectedNullCharacter;
                                 Token.TagName += '\uFFFD';
                             } else
                             {
@@ -128,7 +128,7 @@ namespace dlNetWeb.TokenizerHandler
                         }
                         else
                         {
-                            // eof-in-tag parse error
+                            state.Error = ParseError.EofInTag;
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
                             exitLoop = true;

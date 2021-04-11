@@ -34,7 +34,7 @@ namespace dlNetWeb.TokenizerHandler
                             }
                             else
                             {
-                                //  parse error for "missing-whitespace-before-doctype-name"
+                                state.Error = ParseError.MissingWhitespaceBeforeDoctypeName;
                                 state.State = Tokens.State.BeforeDOCTYPEName;
                                 data.ReadPosition--;
                             }
@@ -79,7 +79,7 @@ namespace dlNetWeb.TokenizerHandler
                             }
                             else if (currentInputCharacter.Span[0] == '>')
                             {
-                                // parse error for "missing-doctype-name"
+                                state.Error = ParseError.MissingDoctypeName;
                                 OnEmitToken(new Tokens.DOCTYPEToken
                                 {
                                     ForceQuirks = true
@@ -128,7 +128,7 @@ namespace dlNetWeb.TokenizerHandler
                             }
                             else if (currentInputCharacter.Span[0] == '\u0000')
                             {
-                                // parse error for "unexpected-null-character"
+                                state.Error = ParseError.UnexpectedNullCharacter;
                                 Token.Name += '\uFFFD'.ToString();
                             }
                             else
@@ -138,7 +138,7 @@ namespace dlNetWeb.TokenizerHandler
                         }
                         else
                         {
-                            //  eof-in-doctype parse error
+                            state.Error = ParseError.EofInDoctype;
                             Token.ForceQuirks = true;
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
@@ -178,7 +178,7 @@ namespace dlNetWeb.TokenizerHandler
                                 }
                                 else
                                 {
-                                    //  invalid-character-sequence-after-doctype-name parse error
+                                    state.Error = ParseError.InvalidCharacterSequenceAfterDoctypeName;
                                     Token.ForceQuirks = true;
                                     data.ReadPosition--;
                                     state.State = Tokens.State.BogusDOCTYPE;
@@ -187,7 +187,7 @@ namespace dlNetWeb.TokenizerHandler
                         }
                         else
                         {
-                            //  eof-in-doctype parse error
+                            state.Error = ParseError.EofInDoctype;
                             Token.ForceQuirks = true;
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());

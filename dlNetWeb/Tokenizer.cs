@@ -22,6 +22,8 @@ namespace dlNetWeb
         private bool consumeAsAttribute = false;
         private Tokens.BaseToken currentToken;
 
+        public ParseError Error => _sharedState.Error;
+
         public Tokenizer(string content)
         {
             _data = new TokenizerHandler.DataSourceMemory(content);
