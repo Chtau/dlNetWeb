@@ -74,10 +74,10 @@ namespace dlNetWeb
                         if (_data.NextChar(_data.ReadPosition, 2).ToString() == "--")
                         {
                             _data.ReadPosition += 2;
-                            /*currentToken = new Tokens.CommantToken
+                            _sharedState.Token = new Tokens.CommantToken
                             {
                                 Value = string.Empty
-                            };*/
+                            };
                             _sharedState.State = Tokens.State.CommentStart;
                         } else if (string.Equals("DOCTYPE", _data.NextChar(_data.ReadPosition, 7).ToString(), StringComparison.OrdinalIgnoreCase))
                         {
@@ -89,11 +89,11 @@ namespace dlNetWeb
                             // TODO: handle CDATA
                         } else
                         {
-                            // parse error for "incorrectly-opened-comment"
-                            /*currentToken = new Tokens.CommantToken
+                            _sharedState.Error = ParseError.IncorrectlyOpenedComment;
+                            _sharedState.Token = new Tokens.CommantToken
                             {
                                 Value = string.Empty
-                            };*/
+                            };
                             _sharedState.State = Tokens.State.BogusComment;
                         }
                         break;
@@ -129,7 +129,7 @@ namespace dlNetWeb
                                 break;
                             } else if (currentInputCharacter.Span[0] == ';')
                             {
-                                // parse error for "unknown-named-character-reference"
+                                _sharedState.Error = ParseError.UnknownNamedCharacterReference;
                             }
                             _sharedState.State = _sharedState.ReturnState;
                             _data.ReadPosition--; // reconsume in return
