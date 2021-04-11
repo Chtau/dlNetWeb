@@ -16,6 +16,7 @@ namespace dlNetWeb
         private readonly TokenizerHandler.TagHandler _tagHandler = new TokenizerHandler.TagHandler();
         private readonly TokenizerHandler.AttributeHandler _attributeHandler = new TokenizerHandler.AttributeHandler();
         private readonly TokenizerHandler.CharacterReferenceHandler _characterReferenceHandler = new TokenizerHandler.CharacterReferenceHandler();
+        private readonly TokenizerHandler.CommentHandler _commentHandler = new TokenizerHandler.CommentHandler();
 
         public ParseError Error => _sharedState.Error;
 
@@ -26,6 +27,7 @@ namespace dlNetWeb
             _tagHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
             _attributeHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
             _characterReferenceHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
+            _commentHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
         }
 
         private void OnTokenEmitted(Tokens.BaseToken token)
@@ -157,6 +159,20 @@ namespace dlNetWeb
                     case Tokens.State.AttributeValueUnquoted:
                     case Tokens.State.AfterAttributeValueQuoted:
                         if (_attributeHandler.Run())
+                            exitLoop = true;
+                        break;
+                    case Tokens.State.BogusComment:
+                    case Tokens.State.CommentStart:
+                    case Tokens.State.CommentStartDash:
+                    case Tokens.State.Comment:
+                    case Tokens.State.CommentLessThanSign:
+                    case Tokens.State.CommentLessThanSignBang:
+                    case Tokens.State.CommentLessThanSignBangDash:
+                    case Tokens.State.CommentLessThanSignBangDashDash:
+                    case Tokens.State.CommentEndDash:
+                    case Tokens.State.CommentEnd:
+                    case Tokens.State.CommentEndBang:
+                        if (_commentHandler.Run())
                             exitLoop = true;
                         break;
                     default:
