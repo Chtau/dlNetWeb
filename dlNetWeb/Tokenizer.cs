@@ -15,6 +15,8 @@ namespace dlNetWeb
         private readonly TokenizerHandler.IDataSource _data;
         private readonly TokenizerHandler.DocTypeHandler _docTypeHandler = new TokenizerHandler.DocTypeHandler();
         private readonly TokenizerHandler.TagHandler _tagHandler = new TokenizerHandler.TagHandler();
+        private readonly TokenizerHandler.AttributeHandler _attributeHandler = new TokenizerHandler.AttributeHandler();
+        private readonly TokenizerHandler.CharacterReferenceHandler _characterReferenceHandler = new TokenizerHandler.CharacterReferenceHandler();
 
         //private Tokens.State state = Tokens.State.Data;
         //private Tokens.State returnState = Tokens.State.Data;
@@ -27,16 +29,15 @@ namespace dlNetWeb
         public Tokenizer(string content)
         {
             _data = new TokenizerHandler.DataSourceMemory(content);
-            _docTypeHandler.Initialize(_data, _logger, _sharedState);
-            _docTypeHandler.EmitToken += (obj, token) =>
-            {
-                EmitToken.Invoke(obj, token);
-            };
-            _tagHandler.Initialize(_data, _logger, _sharedState);
-            _tagHandler.EmitToken += (obj, token) =>
-            {
-                EmitToken.Invoke(obj, token);
-            };
+            _docTypeHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
+            _tagHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
+            _attributeHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
+            _characterReferenceHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
+        }
+
+        private void OnTokenEmitted(Tokens.BaseToken token)
+        {
+            EmitToken.Invoke(this, token);
         }
 
         public void Run()
@@ -122,70 +123,6 @@ namespace dlNetWeb
                         if (_docTypeHandler.Run())
                             exitLoop = true;
                         break;
-                    case Tokens.State.CharacterReference:
-                        temporaryBuffer = string.Empty;
-                        currentInputCharacter = _data.NextChar(_data.ReadPosition++);
-                        if (!currentInputCharacter.IsEmpty)
-                        {
-                            if (currentInputCharacter.Span[0].IsAlphaNumeric())
-                            {
-                                // Reconsume in the named character reference state.
-                                _sharedState.State = Tokens.State.NamedCharacterReference;
-                            } else if (currentInputCharacter.Span[0] == '#')
-                            {
-                                temporaryBuffer += currentInputCharacter.Span[0];
-                                _sharedState.State = Tokens.State.NumericCharacterReference;
-                                break;
-                            } else
-                            {
-                                _data.ReadPosition--;
-                                _sharedState.State = _sharedState.ReturnState;
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            exitLoop = true;
-                        }
-                        break;
-                    case Tokens.State.NamedCharacterReference:
-                        string namedChar = string.Empty + currentInputCharacter.Span[0];
-                        //temporaryBuffer += namedChar;
-                        if (!consumeAsAttribute)
-                        {
-                            // peak till no match for a key in _namedCharacterReference
-                            string matchKey = null;
-                            for (int i = 1; i < _namedCharacterReference.MaxKeyLength; i++)
-                            {
-                                var match = _namedCharacterReference.HasMatchingKeys(namedChar);
-                                if (string.IsNullOrWhiteSpace(match))
-                                    break;
-                                else
-                                {
-                                    matchKey = match;
-                                    namedChar += _data.NextChar(_data.ReadPosition + 1, 1 + i);
-                                }
-                            }
-                            if (matchKey.Length > 0)
-                            {
-                                if (matchKey[^1] != ';')
-                                {
-                                    // set parse error for "missing-semicolon-after-character-reference"
-                                }
-                                // append characters from key to buffer
-                                temporaryBuffer += _namedCharacterReference.Entities[matchKey].Characters;
-                                // mark as consumed
-                                _data.ReadPosition += matchKey.Length - 1; // -1 because & was already consumed
-                                _sharedState.State = _sharedState.ReturnState;
-                                break;
-                            } else
-                            {
-                                temporaryBuffer += currentInputCharacter.Span[0];
-                                _sharedState.State = Tokens.State.AmbiguousAmpersand;
-                                break;
-                            }
-                        }
-                        break;
                     case Tokens.State.AmbiguousAmpersand:
                         currentInputCharacter = _data.NextChar(_data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
@@ -210,46 +147,25 @@ namespace dlNetWeb
                             exitLoop = true;
                         }
                         break;
+                    case Tokens.State.CharacterReference:
+                    case Tokens.State.NamedCharacterReference:
                     case Tokens.State.NumericCharacterReference:
-                        if (Char.IsLetter(currentInputCharacter.Span[0]))
-                        {
-                            temporaryBuffer += currentInputCharacter.Span[0];
-                            _sharedState.State = Tokens.State.HexadecimalCharacterReferenceStart;
-                            break;
-                        } else
-                        {
-                            _sharedState.State = Tokens.State.DecimalCharacterReferenceStart;
-                            _data.ReadPosition--;
-                            break;
-                        }
                     case Tokens.State.HexadecimalCharacterReferenceStart:
-                        currentInputCharacter = _data.NextChar(_data.ReadPosition++);
-                        if (Char.IsLetter(currentInputCharacter.Span[0]))
-                        {
-                            _sharedState.State = Tokens.State.HexadecimalCharacterReference;
-                            _data.ReadPosition--;
-                            break;
-                        } else
-                        {
-                            //  parse error for "absence-of-digits-in-numeric-character-reference"
-                            _sharedState.State = _sharedState.ReturnState;
-                            _data.ReadPosition--;
-                            break;
-                        }
                     case Tokens.State.DecimalCharacterReferenceStart:
-                        currentInputCharacter = _data.NextChar(_data.ReadPosition++);
-                        if (Char.IsDigit(currentInputCharacter.Span[0]))
-                        {
-                            _sharedState.State = Tokens.State.DecimalCharacterReference;
-                            _data.ReadPosition--;
-                            break;
-                        } else
-                        {
-                            // parse error for "absence-of-digits-in-numeric-character-reference"
-                            _sharedState.State = _sharedState.ReturnState;
-                            _data.ReadPosition--;
-                            break;
-                        }
+                        if (_characterReferenceHandler.Run())
+                            exitLoop = true;
+                        break;
+                    case Tokens.State.BeforeAttributeName:
+                    case Tokens.State.AttributeName:
+                    case Tokens.State.AfterAttributeName:
+                    case Tokens.State.BeforeAttributeValue:
+                    case Tokens.State.AttributeValueDoubleQuoted:
+                    case Tokens.State.AttributeValueSingleQuoted:
+                    case Tokens.State.AttributeValueUnquoted:
+                    case Tokens.State.AfterAttributeValueQuoted:
+                        if (_attributeHandler.Run())
+                            exitLoop = true;
+                        break;
                     default:
                         break;
                 }
