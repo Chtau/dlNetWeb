@@ -8,7 +8,11 @@ namespace dlNetWeb.TokenizerHandler
     {
         public event EventHandler<Tokens.BaseToken> EmitToken;
 
-        internal T token;
+        internal T Token
+        {
+            get { return (T)state.Token; }
+            set { state.Token = value; }
+        }
         internal IDataSource data;
         internal Helper.ILogger log;
         internal ISharedState state;
@@ -21,12 +25,12 @@ namespace dlNetWeb.TokenizerHandler
             state = sharedState;
         }
 
-        public void Run()
+        public bool Run()
         {
-            OnRun();
+            return OnRun();
         }
 
-        internal virtual void OnRun() { }
+        internal virtual bool OnRun() { return false; }
 
         internal void OnEmitToken(Tokens.BaseToken token)
         {

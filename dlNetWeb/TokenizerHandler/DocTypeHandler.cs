@@ -6,10 +6,11 @@ namespace dlNetWeb.TokenizerHandler
 {
     public class DocTypeHandler : BaseHandler<Tokens.DOCTYPEToken>
     {
-        internal override void OnRun()
+        internal override bool OnRun()
         {
             base.OnRun();
             bool exitLoop = false;
+            bool isEOF = false;
             ReadOnlyMemory<char> currentInputCharacter = ReadOnlyMemory<char>.Empty;
             do
             {
@@ -45,6 +46,7 @@ namespace dlNetWeb.TokenizerHandler
                                 ForceQuirks = true
                             });
                             OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
                             exitLoop = true;
                         }
                         break;
@@ -61,7 +63,7 @@ namespace dlNetWeb.TokenizerHandler
                             }
                             else if (Char.IsLetter(currentInputCharacter.Span[0]) && Char.IsUpper(currentInputCharacter.Span[0]))
                             {
-                                token = new Tokens.DOCTYPEToken
+                                Token = new Tokens.DOCTYPEToken
                                 {
                                     Name = currentInputCharacter.Span[0].ToString().ToLower()
                                 };
@@ -69,7 +71,7 @@ namespace dlNetWeb.TokenizerHandler
                             }
                             else if (currentInputCharacter.Span[0] == '\u0000')
                             {
-                                token = new Tokens.DOCTYPEToken
+                                Token = new Tokens.DOCTYPEToken
                                 {
                                     Name = '\uFFFD'.ToString()
                                 };
@@ -86,7 +88,7 @@ namespace dlNetWeb.TokenizerHandler
                             }
                             else
                             {
-                                token = new Tokens.DOCTYPEToken
+                                Token = new Tokens.DOCTYPEToken
                                 {
                                     Name = currentInputCharacter.Span[0].ToString()
                                 };
@@ -100,6 +102,7 @@ namespace dlNetWeb.TokenizerHandler
                                 ForceQuirks = true
                             });
                             OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
                             exitLoop = true;
                         }
                         break;
@@ -117,28 +120,29 @@ namespace dlNetWeb.TokenizerHandler
                             else if (currentInputCharacter.Span[0] == '>')
                             {
                                 state.State = Tokens.State.Data;
-                                OnEmitToken(token);
+                                OnEmitToken(Token);
                             }
                             else if (Char.IsLetter(currentInputCharacter.Span[0]) && Char.IsUpper(currentInputCharacter.Span[0]))
                             {
-                                token.Name += currentInputCharacter.Span[0].ToString().ToLower();
+                                Token.Name += currentInputCharacter.Span[0].ToString().ToLower();
                             }
                             else if (currentInputCharacter.Span[0] == '\u0000')
                             {
                                 // parse error for "unexpected-null-character"
-                                token.Name += '\uFFFD'.ToString();
+                                Token.Name += '\uFFFD'.ToString();
                             }
                             else
                             {
-                                token.Name += currentInputCharacter.Span[0].ToString();
+                                Token.Name += currentInputCharacter.Span[0].ToString();
                             }
                         }
                         else
                         {
                             //  eof-in-doctype parse error
-                            token.ForceQuirks = true;
-                            OnEmitToken(token);
+                            Token.ForceQuirks = true;
+                            OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
                             exitLoop = true;
                         }
                         break;
@@ -156,7 +160,7 @@ namespace dlNetWeb.TokenizerHandler
                             else if (currentInputCharacter.Span[0] == '>')
                             {
                                 state.State = Tokens.State.Data;
-                                OnEmitToken(token);
+                                OnEmitToken(Token);
                             }
                             else
                             {
@@ -175,7 +179,7 @@ namespace dlNetWeb.TokenizerHandler
                                 else
                                 {
                                     //  invalid-character-sequence-after-doctype-name parse error
-                                    token.ForceQuirks = true;
+                                    Token.ForceQuirks = true;
                                     data.ReadPosition--;
                                     state.State = Tokens.State.BogusDOCTYPE;
                                 }
@@ -184,9 +188,10 @@ namespace dlNetWeb.TokenizerHandler
                         else
                         {
                             //  eof-in-doctype parse error
-                            token.ForceQuirks = true;
-                            OnEmitToken(token);
+                            Token.ForceQuirks = true;
+                            OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
                             exitLoop = true;
                         }
                         break;
@@ -219,6 +224,7 @@ namespace dlNetWeb.TokenizerHandler
                         break;
                 }
             } while (!exitLoop);
+            return isEOF;
         }
     }
 }

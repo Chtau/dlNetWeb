@@ -14,6 +14,7 @@ namespace dlNetWeb
         private readonly TokenizerHandler.ISharedState _sharedState = new TokenizerHandler.SharedState();
         private readonly TokenizerHandler.IDataSource _data;
         private readonly TokenizerHandler.DocTypeHandler _docTypeHandler = new TokenizerHandler.DocTypeHandler();
+        private readonly TokenizerHandler.TagHandler _tagHandler = new TokenizerHandler.TagHandler();
 
         //private Tokens.State state = Tokens.State.Data;
         //private Tokens.State returnState = Tokens.State.Data;
@@ -26,6 +27,11 @@ namespace dlNetWeb
             _data = new TokenizerHandler.DataSourceMemory(content);
             _docTypeHandler.Initialize(_data, _logger, _sharedState);
             _docTypeHandler.EmitToken += (obj, token) =>
+            {
+                EmitToken.Invoke(obj, token);
+            };
+            _tagHandler.Initialize(_data, _logger, _sharedState);
+            _tagHandler.EmitToken += (obj, token) =>
             {
                 EmitToken.Invoke(obj, token);
             };
@@ -62,18 +68,10 @@ namespace dlNetWeb
                         }
                         break;
                     case Tokens.State.TagOpen:
-                        currentInputCharacter = _data.NextChar(_data.ReadPosition++);
-                        if (!currentInputCharacter.IsEmpty)
-                        {
-                            if (currentInputCharacter.Span[0] == '!')
-                            {
-                                _sharedState.State = Tokens.State.MarkupDeclarationOpen;
-                                break;
-                            }
-                        } else
-                        {
+                    case Tokens.State.EndTagOpen:
+                    case Tokens.State.TagName:
+                        if (_tagHandler.Run())
                             exitLoop = true;
-                        }
                         break;
                     case Tokens.State.MarkupDeclarationOpen:
                         if (_data.NextChar(_data.ReadPosition, 2).ToString() == "--")
@@ -106,7 +104,20 @@ namespace dlNetWeb
                     case Tokens.State.BeforeDOCTYPEName:
                     case Tokens.State.DOCTYPEName:
                     case Tokens.State.AfterDOCTYPEName:
-                        _docTypeHandler.Run();
+                    case Tokens.State.AfterDOCTYPEPublicKeyword:
+                    case Tokens.State.BeforeDOCTYPEPublicIdentifier:
+                    case Tokens.State.DOCTYPEPublicIdentifierDoubleQuoted:
+                    case Tokens.State.DOCTYPEPublicIdentifierSingleQuoted:
+                    case Tokens.State.AfterDOCTYPEPublicIdentifier:
+                    case Tokens.State.BetweenDOCTYPEPublicAndSystemIdentifiers:
+                    case Tokens.State.AfterDOCTYPESystemKeyword:
+                    case Tokens.State.BeforeDOCTYPESystemIdentifier:
+                    case Tokens.State.DOCTYPESystemIdentifierDoubleQuoted:
+                    case Tokens.State.DOCTYPESystemIdentifierSingleQuoted:
+                    case Tokens.State.AfterDOCTYPESystemIdentifier:
+                    case Tokens.State.BogusDOCTYPE:
+                        if (_docTypeHandler.Run())
+                            exitLoop = true;
                         break;
                     case Tokens.State.CharacterReference:
                         temporaryBuffer = string.Empty;

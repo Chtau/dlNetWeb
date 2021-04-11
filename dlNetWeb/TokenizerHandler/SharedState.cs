@@ -9,5 +9,6 @@ namespace dlNetWeb.TokenizerHandler
     {
         public State State { get; set; } = State.Data;
         public State ReturnState { get; set; } = State.Data;
+        public Tokens.BaseToken Token { get; set; }
     }
 }
