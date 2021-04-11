@@ -134,6 +134,29 @@ namespace dlNetWeb.TokenizerHandler
                             exitLoop = true;
                         }
                         break;
+                    case Tokens.State.SelfClosingStartTag:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.Span[0] == '>')
+                            {
+                                Token.SelfClosing = true;
+                                OnEmitToken(Token);
+                                state.State = Tokens.State.Data;
+                            } else
+                            {
+                                state.Error = ParseError.UnexpectedSolidusInTag;
+                                data.ReadPosition--;
+                                state.State = Tokens.State.BeforeAttributeName;
+                            }
+                        } else
+                        {
+                            state.Error = ParseError.EofInTag;
+                            OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
+                            exitLoop = true;
+                        }
+                        break;
                     default:
                         exitLoop = true; // exit because we switched to an state which we can't handle here
                         break;

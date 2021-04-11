@@ -72,6 +72,7 @@ namespace dlNetWeb
                     case Tokens.State.TagOpen:
                     case Tokens.State.EndTagOpen:
                     case Tokens.State.TagName:
+                    case Tokens.State.SelfClosingStartTag:
                         if (_tagHandler.Run())
                             exitLoop = true;
                         break;
