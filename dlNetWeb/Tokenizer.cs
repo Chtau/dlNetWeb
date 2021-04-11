@@ -9,7 +9,6 @@ namespace dlNetWeb
     {
         public event EventHandler<Tokens.BaseToken> EmitToken;
 
-        private readonly Data.NamedCharacterReferenceData _namedCharacterReference = new Data.NamedCharacterReferenceData();
         private readonly Helper.ILogger _logger = new Helper.InternalLogger();
         private readonly TokenizerHandler.ISharedState _sharedState = new TokenizerHandler.SharedState();
         private readonly TokenizerHandler.IDataSource _data;
@@ -17,12 +16,6 @@ namespace dlNetWeb
         private readonly TokenizerHandler.TagHandler _tagHandler = new TokenizerHandler.TagHandler();
         private readonly TokenizerHandler.AttributeHandler _attributeHandler = new TokenizerHandler.AttributeHandler();
         private readonly TokenizerHandler.CharacterReferenceHandler _characterReferenceHandler = new TokenizerHandler.CharacterReferenceHandler();
-
-        //private Tokens.State state = Tokens.State.Data;
-        //private Tokens.State returnState = Tokens.State.Data;
-        private string temporaryBuffer = null;
-        private bool consumeAsAttribute = false;
-        private Tokens.BaseToken currentToken;
 
         public ParseError Error => _sharedState.Error;
 
@@ -81,10 +74,10 @@ namespace dlNetWeb
                         if (_data.NextChar(_data.ReadPosition, 2).ToString() == "--")
                         {
                             _data.ReadPosition += 2;
-                            currentToken = new Tokens.CommantToken
+                            /*currentToken = new Tokens.CommantToken
                             {
                                 Value = string.Empty
-                            };
+                            };*/
                             _sharedState.State = Tokens.State.CommentStart;
                         } else if (string.Equals("DOCTYPE", _data.NextChar(_data.ReadPosition, 7).ToString(), StringComparison.OrdinalIgnoreCase))
                         {
@@ -97,10 +90,10 @@ namespace dlNetWeb
                         } else
                         {
                             // parse error for "incorrectly-opened-comment"
-                            currentToken = new Tokens.CommantToken
+                            /*currentToken = new Tokens.CommantToken
                             {
                                 Value = string.Empty
-                            };
+                            };*/
                             _sharedState.State = Tokens.State.BogusComment;
                         }
                         break;

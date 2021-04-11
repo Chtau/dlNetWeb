@@ -23,7 +23,7 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (Char.IsLetterOrDigit(currentInputCharacter.Span[0]))
+                            if (char.IsLetterOrDigit(currentInputCharacter.Span[0]))
                             {
                                 // Reconsume in the named character reference state.
                                 state.State = Tokens.State.NamedCharacterReference;
