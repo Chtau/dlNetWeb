@@ -10,19 +10,25 @@ namespace dlNetWeb
         public event EventHandler<Tokens.BaseToken> EmitToken;
 
         private readonly Data.NamedCharacterReferenceData _namedCharacterReference = new Data.NamedCharacterReferenceData();
+        private readonly Helper.ILogger _logger = new Helper.InternalLogger();
+        private readonly TokenizerHandler.ISharedState _sharedState = new TokenizerHandler.SharedState();
+        private readonly TokenizerHandler.IDataSource _data;
+        private readonly TokenizerHandler.DocTypeHandler _docTypeHandler = new TokenizerHandler.DocTypeHandler();
 
-        private ReadOnlyMemory<char> _memory;
-        private int readPosition = 0;
-
-        private Tokens.State state = Tokens.State.Data;
-        private Tokens.State returnState = Tokens.State.Data;
+        //private Tokens.State state = Tokens.State.Data;
+        //private Tokens.State returnState = Tokens.State.Data;
         private string temporaryBuffer = null;
         private bool consumeAsAttribute = false;
         private Tokens.BaseToken currentToken;
 
         public Tokenizer(string content)
         {
-            _memory = content?.AsMemory() ?? ReadOnlyMemory<char>.Empty;
+            _data = new TokenizerHandler.DataSourceMemory(content);
+            _docTypeHandler.Initialize(_data, _logger, _sharedState);
+            _docTypeHandler.EmitToken += (obj, token) =>
+            {
+                EmitToken.Invoke(obj, token);
+            };
         }
 
         public void Run()
@@ -31,23 +37,23 @@ namespace dlNetWeb
             ReadOnlyMemory<char> currentInputCharacter = ReadOnlyMemory<char>.Empty;
             do
             {
-                switch (state)
+                switch (_sharedState.State)
                 {
                     case Tokens.State.Data:
-                        currentInputCharacter = OnNextChar(readPosition++);
+                        currentInputCharacter = _data.NextChar(_data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
                             if (currentInputCharacter.Span[0] == '&')
                             {
-                                returnState = Tokens.State.Data;
+                                _sharedState.ReturnState = Tokens.State.Data;
                                 // Switch state to CharacterReference
-                                state = Tokens.State.CharacterReference;
+                                _sharedState.State = Tokens.State.CharacterReference;
                                 break;
                             }
                             else if (currentInputCharacter.Span[0] == '<')
                             {
                                 // Switch state to TagOpen
-                                state = Tokens.State.TagOpen;
+                                _sharedState.State = Tokens.State.TagOpen;
                                 break;
                             }
                         } else
@@ -56,12 +62,12 @@ namespace dlNetWeb
                         }
                         break;
                     case Tokens.State.TagOpen:
-                        currentInputCharacter = OnNextChar(readPosition++);
+                        currentInputCharacter = _data.NextChar(_data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
                             if (currentInputCharacter.Span[0] == '!')
                             {
-                                state = Tokens.State.MarkupDeclarationOpen;
+                                _sharedState.State = Tokens.State.MarkupDeclarationOpen;
                                 break;
                             }
                         } else
@@ -70,21 +76,21 @@ namespace dlNetWeb
                         }
                         break;
                     case Tokens.State.MarkupDeclarationOpen:
-                        if (OnNextChar(readPosition, 2).ToString() == "--")
+                        if (_data.NextChar(_data.ReadPosition, 2).ToString() == "--")
                         {
-                            readPosition += 2;
+                            _data.ReadPosition += 2;
                             currentToken = new Tokens.CommantToken
                             {
                                 Value = string.Empty
                             };
-                            state = Tokens.State.CommentStart;
-                        } else if (string.Equals("DOCTYPE", OnNextChar(readPosition, 7).ToString(), StringComparison.OrdinalIgnoreCase))
+                            _sharedState.State = Tokens.State.CommentStart;
+                        } else if (string.Equals("DOCTYPE", _data.NextChar(_data.ReadPosition, 7).ToString(), StringComparison.OrdinalIgnoreCase))
                         {
-                            readPosition += 7;
-                            state = Tokens.State.DOCTYPE;
-                        } else if (string.Equals("[CDATA[", OnNextChar(readPosition, 7)))
+                            _data.ReadPosition += 7;
+                            _sharedState.State = Tokens.State.DOCTYPE;
+                        } else if (string.Equals("[CDATA[", _data.NextChar(_data.ReadPosition, 7)))
                         {
-                            readPosition += 7;
+                            _data.ReadPosition += 7;
                             // TODO: handle CDATA
                         } else
                         {
@@ -93,225 +99,33 @@ namespace dlNetWeb
                             {
                                 Value = string.Empty
                             };
-                            state = Tokens.State.BogusComment;
+                            _sharedState.State = Tokens.State.BogusComment;
                         }
                         break;
                     case Tokens.State.DOCTYPE:
-                        currentInputCharacter = OnNextChar(readPosition++);
-                        if (!currentInputCharacter.IsEmpty)
-                        {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                                || currentInputCharacter.Span[0] == '\u000A'
-                                || currentInputCharacter.Span[0] == '\u000C'
-                                || currentInputCharacter.Span[0] == '\u0020')
-                            {
-                                state = Tokens.State.BeforeDOCTYPEName;
-                            } else if (currentInputCharacter.Span[0] == '>')
-                            {
-                                state = Tokens.State.BeforeDOCTYPEName;
-                                readPosition--;
-                            } else
-                            {
-                                //  parse error for "missing-whitespace-before-doctype-name"
-                                state = Tokens.State.BeforeDOCTYPEName;
-                                readPosition--;
-                            }
-                        } else
-                        {
-                            EmitToken?.Invoke(this, new Tokens.DOCTYPEToken
-                            {
-                                ForceQuirks = true
-                            });
-                            EmitToken?.Invoke(this, new Tokens.EndOfFileToken());
-                            exitLoop = true;
-                        }
-                        break;
                     case Tokens.State.BeforeDOCTYPEName:
-                        currentInputCharacter = OnNextChar(readPosition++);
-                        if (!currentInputCharacter.IsEmpty)
-                        {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                                || currentInputCharacter.Span[0] == '\u000A'
-                                || currentInputCharacter.Span[0] == '\u000C'
-                                || currentInputCharacter.Span[0] == '\u0020')
-                            {
-                                // ignore character
-                            } else if (Char.IsLetter(currentInputCharacter.Span[0]) && Char.IsUpper(currentInputCharacter.Span[0]))
-                            {
-                                currentToken = new Tokens.DOCTYPEToken
-                                {
-                                    Name = currentInputCharacter.Span[0].ToString().ToLower()
-                                };
-                                state = Tokens.State.DOCTYPEName;
-                            } else if (currentInputCharacter.Span[0] == '\u0000')
-                            {
-                                currentToken = new Tokens.DOCTYPEToken
-                                {
-                                    Name = '\uFFFD'.ToString()
-                                };
-                                state = Tokens.State.DOCTYPEName;
-                            } else if (currentInputCharacter.Span[0] == '>')
-                            {
-                                // parse error for "missing-doctype-name"
-                                EmitToken?.Invoke(this, new Tokens.DOCTYPEToken
-                                {
-                                    ForceQuirks = true
-                                });
-                                state = Tokens.State.Data;
-                            } else
-                            {
-                                currentToken = new Tokens.DOCTYPEToken
-                                {
-                                    Name = currentInputCharacter.Span[0].ToString()
-                                };
-                                state = Tokens.State.DOCTYPEName;
-                            }
-                        }
-                        else
-                        {
-                            EmitToken?.Invoke(this, new Tokens.DOCTYPEToken
-                            {
-                                ForceQuirks = true
-                            });
-                            EmitToken?.Invoke(this, new Tokens.EndOfFileToken());
-                            exitLoop = true;
-                        }
-                        break;
                     case Tokens.State.DOCTYPEName:
-                        currentInputCharacter = OnNextChar(readPosition++);
-                        if (!currentInputCharacter.IsEmpty)
-                        {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                                || currentInputCharacter.Span[0] == '\u000A'
-                                || currentInputCharacter.Span[0] == '\u000C'
-                                || currentInputCharacter.Span[0] == '\u0020')
-                            {
-                                state = Tokens.State.AfterDOCTYPEName;
-                            } else if (currentInputCharacter.Span[0] == '>')
-                            {
-                                state = Tokens.State.Data;
-                                EmitToken?.Invoke(this, currentToken);
-                            } else if (Char.IsLetter(currentInputCharacter.Span[0]) && Char.IsUpper(currentInputCharacter.Span[0]))
-                            {
-                                if (currentToken is Tokens.DOCTYPEToken docToken)
-                                {
-                                    docToken.Name += currentInputCharacter.Span[0].ToString().ToLower();
-                                } else
-                                {
-                                    // TODO: warning if this is not the correct token type
-                                }
-                            } else if (currentInputCharacter.Span[0] == '\u0000')
-                            {
-                                // parse error for "unexpected-null-character"
-                                if (currentToken is Tokens.DOCTYPEToken docToken)
-                                {
-                                    docToken.Name += '\uFFFD'.ToString();
-                                }
-                                else
-                                {
-                                    // TODO: warning if this is not the correct token type
-                                }
-                            } else
-                            {
-                                if (currentToken is Tokens.DOCTYPEToken docToken)
-                                {
-                                    docToken.Name += currentInputCharacter.Span[0].ToString();
-                                }
-                                else
-                                {
-                                    // TODO: warning if this is not the correct token type
-                                }
-                            }
-                        }
-                        else
-                        {
-                            //  eof-in-doctype parse error
-                            if (currentToken is Tokens.DOCTYPEToken docToken)
-                            {
-                                docToken.ForceQuirks = true;
-                                EmitToken?.Invoke(this, docToken);
-                            }
-                            else
-                            {
-                                // TODO: warning if this is not the correct token type
-                            }
-                            EmitToken?.Invoke(this, new Tokens.EndOfFileToken());
-                            exitLoop = true;
-                        }
-                        break;
                     case Tokens.State.AfterDOCTYPEName:
-                        currentInputCharacter = OnNextChar(readPosition++);
-                        if (!currentInputCharacter.IsEmpty)
-                        {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                                || currentInputCharacter.Span[0] == '\u000A'
-                                || currentInputCharacter.Span[0] == '\u000C'
-                                || currentInputCharacter.Span[0] == '\u0020')
-                            {
-                                // ignore character
-                            }
-                            else if (currentInputCharacter.Span[0] == '>')
-                            {
-                                state = Tokens.State.Data;
-                                EmitToken.Invoke(this, currentToken);
-                            } else 
-                            {
-                                var afterDocTypeStartPositon = readPosition--;
-                                string afterDocTypeValue = OnNextChar(afterDocTypeStartPositon, 6).ToString();
-                                if (string.Equals("PUBLIC", afterDocTypeValue, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    readPosition += 5;
-                                    state = Tokens.State.AfterDOCTYPEPublicKeyword;
-                                } else if (string.Equals("SYSTEM", afterDocTypeValue, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    readPosition += 5;
-                                    state = Tokens.State.AfterDOCTYPESystemKeyword;
-                                } else
-                                {
-                                    //  invalid-character-sequence-after-doctype-name parse error
-                                    if (currentToken is Tokens.DOCTYPEToken docToken)
-                                    {
-                                        docToken.ForceQuirks = true;
-                                        readPosition--;
-                                        state = Tokens.State.BogusDOCTYPE;
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            //  eof-in-doctype parse error
-                            if (currentToken is Tokens.DOCTYPEToken docToken)
-                            {
-                                docToken.ForceQuirks = true;
-                                EmitToken?.Invoke(this, docToken);
-                            }
-                            else
-                            {
-                                // TODO: warning if this is not the correct token type
-                            }
-                            EmitToken?.Invoke(this, new Tokens.EndOfFileToken());
-                            exitLoop = true;
-                        }
+                        _docTypeHandler.Run();
                         break;
                     case Tokens.State.CharacterReference:
                         temporaryBuffer = string.Empty;
-                        currentInputCharacter = OnNextChar(readPosition++);
+                        currentInputCharacter = _data.NextChar(_data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
                             if (currentInputCharacter.Span[0].IsAlphaNumeric())
                             {
                                 // Reconsume in the named character reference state.
-                                state = Tokens.State.NamedCharacterReference;
+                                _sharedState.State = Tokens.State.NamedCharacterReference;
                             } else if (currentInputCharacter.Span[0] == '#')
                             {
                                 temporaryBuffer += currentInputCharacter.Span[0];
-                                state = Tokens.State.NumericCharacterReference;
+                                _sharedState.State = Tokens.State.NumericCharacterReference;
                                 break;
                             } else
                             {
-                                readPosition--;
-                                state = returnState;
+                                _data.ReadPosition--;
+                                _sharedState.State = _sharedState.ReturnState;
                                 break;
                             }
                         }
@@ -335,7 +149,7 @@ namespace dlNetWeb
                                 else
                                 {
                                     matchKey = match;
-                                    namedChar += OnNextChar(readPosition + 1, 1 + i);
+                                    namedChar += _data.NextChar(_data.ReadPosition + 1, 1 + i);
                                 }
                             }
                             if (matchKey.Length > 0)
@@ -347,19 +161,19 @@ namespace dlNetWeb
                                 // append characters from key to buffer
                                 temporaryBuffer += _namedCharacterReference.Entities[matchKey].Characters;
                                 // mark as consumed
-                                readPosition += matchKey.Length - 1; // -1 because & was already consumed
-                                state = returnState;
+                                _data.ReadPosition += matchKey.Length - 1; // -1 because & was already consumed
+                                _sharedState.State = _sharedState.ReturnState;
                                 break;
                             } else
                             {
                                 temporaryBuffer += currentInputCharacter.Span[0];
-                                state = Tokens.State.AmbiguousAmpersand;
+                                _sharedState.State = Tokens.State.AmbiguousAmpersand;
                                 break;
                             }
                         }
                         break;
                     case Tokens.State.AmbiguousAmpersand:
-                        currentInputCharacter = OnNextChar(readPosition++);
+                        currentInputCharacter = _data.NextChar(_data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
                             if (currentInputCharacter.Span[0].IsAlphaNumeric())
@@ -373,8 +187,8 @@ namespace dlNetWeb
                             {
                                 // parse error for "unknown-named-character-reference"
                             }
-                            state = returnState;
-                            readPosition--; // reconsume in return
+                            _sharedState.State = _sharedState.ReturnState;
+                            _data.ReadPosition--; // reconsume in return
                             break;
                         }
                         else
@@ -386,53 +200,46 @@ namespace dlNetWeb
                         if (Char.IsLetter(currentInputCharacter.Span[0]))
                         {
                             temporaryBuffer += currentInputCharacter.Span[0];
-                            state = Tokens.State.HexadecimalCharacterReferenceStart;
+                            _sharedState.State = Tokens.State.HexadecimalCharacterReferenceStart;
                             break;
                         } else
                         {
-                            state = Tokens.State.DecimalCharacterReferenceStart;
-                            readPosition--;
+                            _sharedState.State = Tokens.State.DecimalCharacterReferenceStart;
+                            _data.ReadPosition--;
                             break;
                         }
                     case Tokens.State.HexadecimalCharacterReferenceStart:
-                        currentInputCharacter = OnNextChar(readPosition++);
+                        currentInputCharacter = _data.NextChar(_data.ReadPosition++);
                         if (Char.IsLetter(currentInputCharacter.Span[0]))
                         {
-                            state = Tokens.State.HexadecimalCharacterReference;
-                            readPosition--;
+                            _sharedState.State = Tokens.State.HexadecimalCharacterReference;
+                            _data.ReadPosition--;
                             break;
                         } else
                         {
                             //  parse error for "absence-of-digits-in-numeric-character-reference"
-                            state = returnState;
-                            readPosition--;
+                            _sharedState.State = _sharedState.ReturnState;
+                            _data.ReadPosition--;
                             break;
                         }
                     case Tokens.State.DecimalCharacterReferenceStart:
-                        currentInputCharacter = OnNextChar(readPosition++);
+                        currentInputCharacter = _data.NextChar(_data.ReadPosition++);
                         if (Char.IsDigit(currentInputCharacter.Span[0]))
                         {
-                            state = Tokens.State.DecimalCharacterReference;
-                            readPosition--;
+                            _sharedState.State = Tokens.State.DecimalCharacterReference;
+                            _data.ReadPosition--;
                             break;
                         } else
                         {
                             // parse error for "absence-of-digits-in-numeric-character-reference"
-                            state = returnState;
-                            readPosition--;
+                            _sharedState.State = _sharedState.ReturnState;
+                            _data.ReadPosition--;
                             break;
                         }
                     default:
                         break;
                 }
             } while (!exitLoop);
-        }
-
-        private ReadOnlyMemory<char> OnNextChar(int start, int length = 1)
-        {
-            if (!_memory.IsEmpty && _memory.Length > (start + length))
-                return _memory.Slice(start, length);
-            return ReadOnlyMemory<char>.Empty;
         }
     }
 }

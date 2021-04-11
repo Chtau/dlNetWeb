@@ -12,15 +12,18 @@ namespace dlNetWeb.Test
         {
             var file = System.IO.File.ReadAllText(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "TestFiles", "simple.html"));
             var tokenizer = new Tokenizer(file);
+            bool isEOF = false;
             tokenizer.EmitToken += (obj, token) =>
             {
-                System.Diagnostics.Debug.Print($"Token Emit:{token}");
+                System.Diagnostics.Debug.Print($"Token Emit:{Environment.NewLine}{Newtonsoft.Json.JsonConvert.SerializeObject(token, Newtonsoft.Json.Formatting.Indented)}");
+                if (token is Tokens.EndOfFileToken)
+                    isEOF = true;
             };
             tokenizer.Run();
             do
             {
                 System.Threading.Thread.Sleep(TimeSpan.FromSeconds(1));
-            } while (true);
+            } while (!isEOF);
         }
     }
 }
