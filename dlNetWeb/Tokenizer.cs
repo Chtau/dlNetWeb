@@ -430,9 +430,9 @@ namespace dlNetWeb
 
         private ReadOnlyMemory<char> OnNextChar(int start, int length = 1)
         {
-            if (_memory.IsEmpty)
-                return ReadOnlyMemory<char>.Empty;
-            return _memory.Slice(start, length);
+            if (!_memory.IsEmpty && _memory.Length > (start + length))
+                return _memory.Slice(start, length);
+            return ReadOnlyMemory<char>.Empty;
         }
     }
 }
