@@ -136,10 +136,161 @@ namespace dlNetWeb
                                 || currentInputCharacter.Span[0] == '\u0020')
                             {
                                 // ignore character
+                            } else if (Char.IsLetter(currentInputCharacter.Span[0]) && Char.IsUpper(currentInputCharacter.Span[0]))
+                            {
+                                currentToken = new Tokens.DOCTYPEToken
+                                {
+                                    Name = currentInputCharacter.Span[0].ToString().ToLower()
+                                };
+                                state = Tokens.State.DOCTYPEName;
+                            } else if (currentInputCharacter.Span[0] == '\u0000')
+                            {
+                                currentToken = new Tokens.DOCTYPEToken
+                                {
+                                    Name = '\uFFFD'.ToString()
+                                };
+                                state = Tokens.State.DOCTYPEName;
+                            } else if (currentInputCharacter.Span[0] == '>')
+                            {
+                                // parse error for "missing-doctype-name"
+                                EmitToken?.Invoke(this, new Tokens.DOCTYPEToken
+                                {
+                                    ForceQuirks = true
+                                });
+                                state = Tokens.State.Data;
+                            } else
+                            {
+                                currentToken = new Tokens.DOCTYPEToken
+                                {
+                                    Name = currentInputCharacter.Span[0].ToString()
+                                };
+                                state = Tokens.State.DOCTYPEName;
                             }
                         }
                         else
                         {
+                            EmitToken?.Invoke(this, new Tokens.DOCTYPEToken
+                            {
+                                ForceQuirks = true
+                            });
+                            EmitToken?.Invoke(this, new Tokens.EndOfFileToken());
+                            exitLoop = true;
+                        }
+                        break;
+                    case Tokens.State.DOCTYPEName:
+                        currentInputCharacter = OnNextChar(readPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.Span[0] == '\u0009'
+                                || currentInputCharacter.Span[0] == '\u000A'
+                                || currentInputCharacter.Span[0] == '\u000C'
+                                || currentInputCharacter.Span[0] == '\u0020')
+                            {
+                                state = Tokens.State.AfterDOCTYPEName;
+                            } else if (currentInputCharacter.Span[0] == '>')
+                            {
+                                state = Tokens.State.Data;
+                                EmitToken?.Invoke(this, currentToken);
+                            } else if (Char.IsLetter(currentInputCharacter.Span[0]) && Char.IsUpper(currentInputCharacter.Span[0]))
+                            {
+                                if (currentToken is Tokens.DOCTYPEToken docToken)
+                                {
+                                    docToken.Name += currentInputCharacter.Span[0].ToString().ToLower();
+                                } else
+                                {
+                                    // TODO: warning if this is not the correct token type
+                                }
+                            } else if (currentInputCharacter.Span[0] == '\u0000')
+                            {
+                                // parse error for "unexpected-null-character"
+                                if (currentToken is Tokens.DOCTYPEToken docToken)
+                                {
+                                    docToken.Name += '\uFFFD'.ToString();
+                                }
+                                else
+                                {
+                                    // TODO: warning if this is not the correct token type
+                                }
+                            } else
+                            {
+                                if (currentToken is Tokens.DOCTYPEToken docToken)
+                                {
+                                    docToken.Name += currentInputCharacter.Span[0].ToString();
+                                }
+                                else
+                                {
+                                    // TODO: warning if this is not the correct token type
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //  eof-in-doctype parse error
+                            if (currentToken is Tokens.DOCTYPEToken docToken)
+                            {
+                                docToken.ForceQuirks = true;
+                                EmitToken?.Invoke(this, docToken);
+                            }
+                            else
+                            {
+                                // TODO: warning if this is not the correct token type
+                            }
+                            EmitToken?.Invoke(this, new Tokens.EndOfFileToken());
+                            exitLoop = true;
+                        }
+                        break;
+                    case Tokens.State.AfterDOCTYPEName:
+                        currentInputCharacter = OnNextChar(readPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.Span[0] == '\u0009'
+                                || currentInputCharacter.Span[0] == '\u000A'
+                                || currentInputCharacter.Span[0] == '\u000C'
+                                || currentInputCharacter.Span[0] == '\u0020')
+                            {
+                                // ignore character
+                            }
+                            else if (currentInputCharacter.Span[0] == '>')
+                            {
+                                state = Tokens.State.Data;
+                                EmitToken.Invoke(this, currentToken);
+                            } else 
+                            {
+                                var afterDocTypeStartPositon = readPosition--;
+                                string afterDocTypeValue = OnNextChar(afterDocTypeStartPositon, 6).ToString();
+                                if (string.Equals("PUBLIC", afterDocTypeValue, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    readPosition += 5;
+                                    state = Tokens.State.AfterDOCTYPEPublicKeyword;
+                                } else if (string.Equals("SYSTEM", afterDocTypeValue, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    readPosition += 5;
+                                    state = Tokens.State.AfterDOCTYPESystemKeyword;
+                                } else
+                                {
+                                    //  invalid-character-sequence-after-doctype-name parse error
+                                    if (currentToken is Tokens.DOCTYPEToken docToken)
+                                    {
+                                        docToken.ForceQuirks = true;
+                                        readPosition--;
+                                        state = Tokens.State.BogusDOCTYPE;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //  eof-in-doctype parse error
+                            if (currentToken is Tokens.DOCTYPEToken docToken)
+                            {
+                                docToken.ForceQuirks = true;
+                                EmitToken?.Invoke(this, docToken);
+                            }
+                            else
+                            {
+                                // TODO: warning if this is not the correct token type
+                            }
+                            EmitToken?.Invoke(this, new Tokens.EndOfFileToken());
                             exitLoop = true;
                         }
                         break;
