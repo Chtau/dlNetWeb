@@ -27,6 +27,12 @@ namespace dlNetWeb.Extensions
             return Char.IsLetter(charSpan) && Char.IsUpper(charSpan);
         }
 
+        public static bool IsLetterLower(this ReadOnlyMemory<char> memoryChar)
+        {
+            var charSpan = memoryChar.Span[0];
+            return Char.IsLetter(charSpan) && Char.IsLower(charSpan);
+        }
+
         public static bool IsLetterOrDigit(this ReadOnlyMemory<char> memoryChar)
         {
             return char.IsLetterOrDigit(memoryChar.Span[0]);

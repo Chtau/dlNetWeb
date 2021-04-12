@@ -36,6 +36,7 @@ namespace dlNetWeb.TokenizerHandler
         internal void OnEmitToken(Tokens.BaseToken token)
         {
             tokenCallback.Invoke(token);
+            state.Tokens.Add(token);
         }
 
         internal void OnChangeState(Tokens.State eState)
@@ -46,6 +47,13 @@ namespace dlNetWeb.TokenizerHandler
         internal void OnSetParseError(ParseError parseError)
         {
             state.Error = parseError;
+        }
+
+        internal Tokens.BaseToken GetLastToken()
+        {
+            if (state.Tokens.Count > 0)
+                return state.Tokens[^1];
+            return null;
         }
     }
 }
