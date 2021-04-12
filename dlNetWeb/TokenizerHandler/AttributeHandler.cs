@@ -121,6 +121,7 @@ namespace dlNetWeb.TokenizerHandler
                             OnSetParseError(ParseError.EofInTag);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
+                            exitLoop = true;
                         }
                         break;
                     case Tokens.State.BeforeAttributeValue:
@@ -180,6 +181,7 @@ namespace dlNetWeb.TokenizerHandler
                             OnSetParseError(ParseError.EofInTag);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
+                            exitLoop = true;
                         }
                         break;
                     case Tokens.State.AttributeValueSingleQuoted:
@@ -210,6 +212,7 @@ namespace dlNetWeb.TokenizerHandler
                             OnSetParseError(ParseError.EofInTag);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
+                            exitLoop = true;
                         }
                         break;
                     case Tokens.State.AttributeValueUnquoted:
@@ -246,6 +249,7 @@ namespace dlNetWeb.TokenizerHandler
                             OnSetParseError(ParseError.EofInTag);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
+                            exitLoop = true;
                         }
                         break;
                     case Tokens.State.AfterAttributeValueQuoted:
@@ -274,6 +278,7 @@ namespace dlNetWeb.TokenizerHandler
                             OnSetParseError(ParseError.EofInTag);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
+                            exitLoop = true;
                         }
                         break;
                     default:

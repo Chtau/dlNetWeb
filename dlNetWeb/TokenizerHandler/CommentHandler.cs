@@ -38,6 +38,7 @@ namespace dlNetWeb.TokenizerHandler
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
+                            exitLoop = true;
                         }
                         break;
                     case Tokens.State.CommentStart:
@@ -88,6 +89,7 @@ namespace dlNetWeb.TokenizerHandler
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
+                            exitLoop = true;
                         }
                         break;
                     case Tokens.State.Comment:
@@ -119,6 +121,7 @@ namespace dlNetWeb.TokenizerHandler
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
+                            exitLoop = true;
                         }
                         break;
                     case Tokens.State.CommentLessThanSign:
@@ -213,6 +216,7 @@ namespace dlNetWeb.TokenizerHandler
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
+                            exitLoop = true;
                         }
                         break;
                     case Tokens.State.CommentEnd:
@@ -244,6 +248,7 @@ namespace dlNetWeb.TokenizerHandler
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
+                            exitLoop = true;
                         }
                         break;
                     case Tokens.State.CommentEndBang:
@@ -274,6 +279,7 @@ namespace dlNetWeb.TokenizerHandler
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
+                            exitLoop = true;
                         }
                         break;
                     default:

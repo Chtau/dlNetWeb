@@ -185,28 +185,450 @@ namespace dlNetWeb.TokenizerHandler
                         }
                         break;
                     case Tokens.State.AfterDOCTYPEPublicKeyword:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.AnyOf('\u0009', '\u000A', '\u000C', '\u0020'))
+                            {
+                                OnChangeState(Tokens.State.BeforeDOCTYPEPublicIdentifier);
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0022'))
+                            {
+                                OnSetParseError(ParseError.MissingWhitespaceAfterDoctypePublicKeyword);
+                                Token.Identifier = string.Empty;
+                                OnChangeState(Tokens.State.DOCTYPEPublicIdentifierDoubleQuoted);
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0027'))
+                            {
+                                OnSetParseError(ParseError.MissingWhitespaceAfterDoctypePublicKeyword);
+                                Token.Identifier = string.Empty;
+                                OnChangeState(Tokens.State.DOCTYPEPublicIdentifierSingleQuoted);
+                            }
+                            else if (currentInputCharacter.AnyOf('>'))
+                            {
+                                OnSetParseError(ParseError.MissingDoctypePublicIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.Data);
+                                OnEmitToken(Token);
+                            }
+                            else
+                            {
+                                OnSetParseError(ParseError.MissingQuoteBeforeDoctypePublicIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.BogusDOCTYPE);
+                                data.ReadPosition--;
+                            }
+                        }
+                        else
+                        {
+                            OnSetParseError(ParseError.EofInDoctype);
+                            Token.ForceQuirks = true;
+                            OnEmitToken(Token);
+                            OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
+                            exitLoop = true;
+                        }
                         break;
                     case Tokens.State.BeforeDOCTYPEPublicIdentifier:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.AnyOf('\u0009', '\u000A', '\u000C', '\u0020'))
+                            {
+                                // ignore
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0022'))
+                            {
+                                Token.Identifier = string.Empty;
+                                OnChangeState(Tokens.State.DOCTYPEPublicIdentifierDoubleQuoted);
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0027'))
+                            {
+                                Token.Identifier = string.Empty;
+                                OnChangeState(Tokens.State.DOCTYPEPublicIdentifierSingleQuoted);
+                            }
+                            else if (currentInputCharacter.AnyOf('>'))
+                            {
+                                OnSetParseError(ParseError.MissingDoctypePublicIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.Data);
+                                OnEmitToken(Token);
+                            }
+                            else
+                            {
+                                OnSetParseError(ParseError.MissingQuoteBeforeDoctypePublicIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.BogusDOCTYPE);
+                                data.ReadPosition--;
+                            }
+                        }
+                        else
+                        {
+                            OnSetParseError(ParseError.EofInDoctype);
+                            Token.ForceQuirks = true;
+                            OnEmitToken(Token);
+                            OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
+                            exitLoop = true;
+                        }
                         break;
                     case Tokens.State.DOCTYPEPublicIdentifierDoubleQuoted:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.AnyOf('\u0022'))
+                            {
+                                OnChangeState(Tokens.State.AfterDOCTYPEPublicIdentifier);
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0000'))
+                            {
+                                OnSetParseError(ParseError.UnexpectedNullCharacter);
+                                Token.Identifier += '\uFFFD';
+                            }
+                            else if (currentInputCharacter.AnyOf('>'))
+                            {
+                                OnSetParseError(ParseError.AbruptDoctypePublicIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.Data);
+                                OnEmitToken(Token);
+                            }
+                            else
+                            {
+                                Token.Identifier += currentInputCharacter.Span[0];
+                            }
+                        }
+                        else
+                        {
+                            OnSetParseError(ParseError.EofInDoctype);
+                            Token.ForceQuirks = true;
+                            OnEmitToken(Token);
+                            OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
+                            exitLoop = true;
+                        }
                         break;
                     case Tokens.State.DOCTYPEPublicIdentifierSingleQuoted:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.AnyOf('\u0027'))
+                            {
+                                OnChangeState(Tokens.State.AfterDOCTYPEPublicIdentifier);
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0000'))
+                            {
+                                OnSetParseError(ParseError.UnexpectedNullCharacter);
+                                Token.Identifier += '\uFFFD';
+                            }
+                            else if (currentInputCharacter.AnyOf('>'))
+                            {
+                                OnSetParseError(ParseError.AbruptDoctypePublicIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.Data);
+                                OnEmitToken(Token);
+                            }
+                            else
+                            {
+                                Token.Identifier += currentInputCharacter.Span[0];
+                            }
+                        }
+                        else
+                        {
+                            OnSetParseError(ParseError.EofInDoctype);
+                            Token.ForceQuirks = true;
+                            OnEmitToken(Token);
+                            OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
+                            exitLoop = true;
+                        }
                         break;
                     case Tokens.State.AfterDOCTYPEPublicIdentifier:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.AnyOf('\u0009', '\u000A', '\u000C', '\u0020'))
+                            {
+                                OnChangeState(Tokens.State.BetweenDOCTYPEPublicAndSystemIdentifiers);
+                            }
+                            else if (currentInputCharacter.AnyOf('>'))
+                            {
+                                OnEmitToken(Token);
+                                OnChangeState(Tokens.State.Data);
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0022'))
+                            {
+                                OnSetParseError(ParseError.MissingWhitespaceBetweenDoctypePublicAndSystemIdentifiers);
+                                Token.SystemIdentifier = string.Empty;
+                                OnChangeState(Tokens.State.DOCTYPESystemIdentifierDoubleQuoted);
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0027'))
+                            {
+                                OnSetParseError(ParseError.MissingWhitespaceBetweenDoctypePublicAndSystemIdentifiers);
+                                Token.SystemIdentifier = string.Empty;
+                                OnChangeState(Tokens.State.DOCTYPESystemIdentifierSingleQuoted);
+                            }
+                            else
+                            {
+                                OnSetParseError(ParseError.MissingQuoteBeforeDoctypeSystemIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.BogusDOCTYPE);
+                                data.ReadPosition--;
+                            }
+                        }
+                        else
+                        {
+                            OnSetParseError(ParseError.EofInDoctype);
+                            Token.ForceQuirks = true;
+                            OnEmitToken(Token);
+                            OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
+                            exitLoop = true;
+                        }
                         break;
                     case Tokens.State.BetweenDOCTYPEPublicAndSystemIdentifiers:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.AnyOf('\u0009', '\u000A', '\u000C', '\u0020'))
+                            {
+                                // ignore
+                            }
+                            else if (currentInputCharacter.AnyOf('>'))
+                            {
+                                OnChangeState(Tokens.State.Data);
+                                OnEmitToken(Token);
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0022', '\u0027'))
+                            {
+                                Token.SystemIdentifier = string.Empty;
+                                OnChangeState(Tokens.State.DOCTYPESystemIdentifierSingleQuoted);
+                            }
+                            else
+                            {
+                                OnSetParseError(ParseError.MissingQuoteBeforeDoctypeSystemIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.BogusDOCTYPE);
+                                data.ReadPosition--;
+                            }
+                        }
+                        else
+                        {
+                            OnSetParseError(ParseError.EofInDoctype);
+                            Token.ForceQuirks = true;
+                            OnEmitToken(Token);
+                            OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
+                            exitLoop = true;
+                        }
                         break;
                     case Tokens.State.AfterDOCTYPESystemKeyword:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.AnyOf('\u0009', '\u000A', '\u000C', '\u0020'))
+                            {
+                                OnChangeState(Tokens.State.BeforeDOCTYPESystemIdentifier);
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0022'))
+                            {
+                                OnSetParseError(ParseError.MissingWhitespaceAfterDoctypeSystemKeyword);
+                                Token.SystemIdentifier = string.Empty;
+                                OnChangeState(Tokens.State.DOCTYPESystemIdentifierDoubleQuoted);
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0027'))
+                            {
+                                OnSetParseError(ParseError.MissingWhitespaceAfterDoctypeSystemKeyword);
+                                Token.SystemIdentifier = string.Empty;
+                                OnChangeState(Tokens.State.DOCTYPESystemIdentifierSingleQuoted);
+                            }
+                            else if (currentInputCharacter.AnyOf('>'))
+                            {
+                                OnSetParseError(ParseError.MissingDoctypeSystemIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.Data);
+                                OnEmitToken(Token);
+                            }
+                            else
+                            {
+                                OnSetParseError(ParseError.MissingQuoteBeforeDoctypeSystemIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.BogusDOCTYPE);
+                                data.ReadPosition--;
+                            }
+                        }
+                        else
+                        {
+                            OnSetParseError(ParseError.EofInDoctype);
+                            Token.ForceQuirks = true;
+                            OnEmitToken(Token);
+                            OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
+                            exitLoop = true;
+                        }
                         break;
                     case Tokens.State.BeforeDOCTYPESystemIdentifier:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.AnyOf('\u0009', '\u000A', '\u000C', '\u0020'))
+                            {
+                                // ignore
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0022'))
+                            {
+                                Token.SystemIdentifier = string.Empty;
+                                OnChangeState(Tokens.State.DOCTYPESystemIdentifierDoubleQuoted);
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0027'))
+                            {
+                                Token.SystemIdentifier = string.Empty;
+                                OnChangeState(Tokens.State.DOCTYPESystemIdentifierSingleQuoted);
+                            }
+                            else if (currentInputCharacter.AnyOf('>'))
+                            {
+                                OnSetParseError(ParseError.MissingDoctypeSystemIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.Data);
+                                OnEmitToken(Token);
+                            }
+                            else
+                            {
+                                OnSetParseError(ParseError.MissingQuoteBeforeDoctypeSystemIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.BogusDOCTYPE);
+                                data.ReadPosition--;
+                            }
+                        }
+                        else
+                        {
+                            OnSetParseError(ParseError.EofInDoctype);
+                            Token.ForceQuirks = true;
+                            OnEmitToken(Token);
+                            OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
+                            exitLoop = true;
+                        }
                         break;
                     case Tokens.State.DOCTYPESystemIdentifierDoubleQuoted:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.AnyOf('\u0022'))
+                            {
+                                OnChangeState(Tokens.State.AfterDOCTYPESystemIdentifier);
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0000'))
+                            {
+                                OnSetParseError(ParseError.UnexpectedNullCharacter);
+                                Token.SystemIdentifier += '\uFFFD';
+                            }
+                            else if (currentInputCharacter.AnyOf('>'))
+                            {
+                                OnSetParseError(ParseError.AbruptDoctypeSystemIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.Data);
+                                OnEmitToken(Token);
+                            }
+                            else
+                            {
+                                Token.SystemIdentifier += currentInputCharacter.Span[0];
+                            }
+                        }
+                        else
+                        {
+                            OnSetParseError(ParseError.EofInDoctype);
+                            Token.ForceQuirks = true;
+                            OnEmitToken(Token);
+                            OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
+                            exitLoop = true;
+                        }
                         break;
                     case Tokens.State.DOCTYPESystemIdentifierSingleQuoted:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.AnyOf('\u0027'))
+                            {
+                                OnChangeState(Tokens.State.AfterDOCTYPESystemIdentifier);
+                            }
+                            else if (currentInputCharacter.AnyOf('\u0000'))
+                            {
+                                OnSetParseError(ParseError.UnexpectedNullCharacter);
+                                Token.SystemIdentifier += '\uFFFD';
+                            }
+                            else if (currentInputCharacter.AnyOf('>'))
+                            {
+                                OnSetParseError(ParseError.AbruptDoctypeSystemIdentifier);
+                                Token.ForceQuirks = true;
+                                OnChangeState(Tokens.State.Data);
+                                OnEmitToken(Token);
+                            }
+                            else
+                            {
+                                Token.SystemIdentifier += currentInputCharacter.Span[0];
+                            }
+                        }
+                        else
+                        {
+                            OnSetParseError(ParseError.EofInDoctype);
+                            Token.ForceQuirks = true;
+                            OnEmitToken(Token);
+                            OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
+                            exitLoop = true;
+                        }
                         break;
                     case Tokens.State.AfterDOCTYPESystemIdentifier:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.AnyOf('\u0009', '\u000A', '\u000C', '\u0020'))
+                            {
+                                // ignore
+                            }
+                            else if (currentInputCharacter.AnyOf('>'))
+                            {
+                                OnChangeState(Tokens.State.Data);
+                                OnEmitToken(Token);
+                            }
+                            else
+                            {
+                                OnSetParseError(ParseError.UnexpectedCharacterAfterDoctypeSystemIdentifier);
+                                OnChangeState(Tokens.State.BogusDOCTYPE);
+                                data.ReadPosition--;
+                            }
+                        }
+                        else
+                        {
+                            OnSetParseError(ParseError.EofInDoctype);
+                            Token.ForceQuirks = true;
+                            OnEmitToken(Token);
+                            OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
+                            exitLoop = true;
+                        }
                         break;
                     case Tokens.State.BogusDOCTYPE:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (!currentInputCharacter.IsEmpty)
+                        {
+                            if (currentInputCharacter.AnyOf('>'))
+                            {
+                                OnChangeState(Tokens.State.Data);
+                                OnEmitToken(Token);
+                            } else if (currentInputCharacter.AnyOf('\u0000'))
+                            {
+                                OnSetParseError(ParseError.UnexpectedNullCharacter);
+                            }
+                        }
+                        else
+                        {
+                            OnEmitToken(Token);
+                            OnEmitToken(new Tokens.EndOfFileToken());
+                            isEOF = true;
+                            exitLoop = true;
+                        }
                         break;
                     default:
                         exitLoop = true; // exit because we switched to an state which we can't handle here

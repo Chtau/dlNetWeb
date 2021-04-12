@@ -43,6 +43,7 @@ namespace dlNetWeb.TokenizerHandler
                         else
                         {
                             exitLoop = true;
+                            isEOF = true;
                         }
                         break;
                     case Tokens.State.NamedCharacterReference:
