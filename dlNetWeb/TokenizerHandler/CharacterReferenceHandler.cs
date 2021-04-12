@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using dlNetWeb.Extensions;
 
 namespace dlNetWeb.TokenizerHandler
 {
@@ -23,20 +24,20 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (char.IsLetterOrDigit(currentInputCharacter.Span[0]))
+                            if (currentInputCharacter.IsLetterOrDigit())
                             {
                                 // Reconsume in the named character reference state.
-                                state.State = Tokens.State.NamedCharacterReference;
+                                OnChangeState(Tokens.State.NamedCharacterReference);
                             }
-                            else if (currentInputCharacter.Span[0] == '#')
+                            else if (currentInputCharacter.AnyOf('#'))
                             {
                                 temporaryBuffer += currentInputCharacter.Span[0];
-                                state.State = Tokens.State.NumericCharacterReference;
+                                OnChangeState(Tokens.State.NumericCharacterReference);
                             }
                             else
                             {
                                 data.ReadPosition--;
-                                state.State = state.ReturnState;
+                                OnChangeState(state.ReturnState);
                             }
                         }
                         else
@@ -66,56 +67,56 @@ namespace dlNetWeb.TokenizerHandler
                             {
                                 if (matchKey[^1] != ';')
                                 {
-                                    state.Error = ParseError.MissingSemicolonAfterCharacterReference;
+                                    OnSetParseError(ParseError.MissingSemicolonAfterCharacterReference);
                                 }
                                 // append characters from key to buffer
                                 temporaryBuffer += _namedCharacterReference.Entities[matchKey].Characters;
                                 // mark as consumed
                                 data.ReadPosition += matchKey.Length - 1; // -1 because & was already consumed
-                                state.State = state.ReturnState;
+                                OnChangeState(state.ReturnState);
                             }
                             else
                             {
                                 temporaryBuffer += currentInputCharacter.Span[0];
-                                state.State = Tokens.State.AmbiguousAmpersand;
+                                OnChangeState(Tokens.State.AmbiguousAmpersand);
                             }
                         }
                         break;
                     case Tokens.State.NumericCharacterReference:
-                        if (Char.IsLetter(currentInputCharacter.Span[0]))
+                        if (currentInputCharacter.IsLetter())
                         {
                             temporaryBuffer += currentInputCharacter.Span[0];
-                            state.State = Tokens.State.HexadecimalCharacterReferenceStart;
+                            OnChangeState(Tokens.State.HexadecimalCharacterReferenceStart);
                         }
                         else
                         {
-                            state.State = Tokens.State.DecimalCharacterReferenceStart;
+                            OnChangeState(Tokens.State.DecimalCharacterReferenceStart);
                             data.ReadPosition--;
                         }
                         break;
                     case Tokens.State.HexadecimalCharacterReferenceStart:
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
-                        if (Char.IsLetter(currentInputCharacter.Span[0]))
+                        if (currentInputCharacter.IsLetter())
                         {
-                            state.State = Tokens.State.HexadecimalCharacterReference;
+                            OnChangeState(Tokens.State.HexadecimalCharacterReference);
                         }
                         else
                         {
-                            state.Error = ParseError.AbsenceOfDigitsInNumericCharacterReference;
-                            state.State = state.ReturnState;
+                            OnSetParseError(ParseError.AbsenceOfDigitsInNumericCharacterReference);
+                            OnChangeState(state.ReturnState);
                         }
                         data.ReadPosition--;
                         break;
                     case Tokens.State.DecimalCharacterReferenceStart:
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
-                        if (Char.IsDigit(currentInputCharacter.Span[0]))
+                        if (currentInputCharacter.IsDigit())
                         {
-                            state.State = Tokens.State.DecimalCharacterReference;
+                            OnChangeState(Tokens.State.DecimalCharacterReference);
                         }
                         else
                         {
-                            state.Error = ParseError.AbsenceOfDigitsInNumericCharacterReference;
-                            state.State = state.ReturnState;
+                            OnSetParseError(ParseError.AbsenceOfDigitsInNumericCharacterReference);
+                            OnChangeState(state.ReturnState);
                         }
                         data.ReadPosition--;
                         break;

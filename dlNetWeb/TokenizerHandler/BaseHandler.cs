@@ -37,5 +37,15 @@ namespace dlNetWeb.TokenizerHandler
         {
             tokenCallback.Invoke(token);
         }
+
+        internal void OnChangeState(Tokens.State eState)
+        {
+            state.State = eState;
+        }
+
+        internal void OnSetParseError(ParseError parseError)
+        {
+            state.Error = parseError;
+        }
     }
 }

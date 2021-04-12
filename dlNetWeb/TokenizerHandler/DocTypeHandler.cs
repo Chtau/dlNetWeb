@@ -1,4 +1,5 @@
-﻿using System;
+﻿using dlNetWeb.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -20,22 +21,19 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                                || currentInputCharacter.Span[0] == '\u000A'
-                                || currentInputCharacter.Span[0] == '\u000C'
-                                || currentInputCharacter.Span[0] == '\u0020')
+                            if (currentInputCharacter.AnyOf('\u0009','\u000A','\u000C','\u0020'))
                             {
-                                state.State = Tokens.State.BeforeDOCTYPEName;
+                                OnChangeState(Tokens.State.BeforeDOCTYPEName);
                             }
-                            else if (currentInputCharacter.Span[0] == '>')
+                            else if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.State = Tokens.State.BeforeDOCTYPEName;
+                                OnChangeState(Tokens.State.BeforeDOCTYPEName);
                                 data.ReadPosition--;
                             }
                             else
                             {
-                                state.Error = ParseError.MissingWhitespaceBeforeDoctypeName;
-                                state.State = Tokens.State.BeforeDOCTYPEName;
+                                OnSetParseError(ParseError.MissingWhitespaceBeforeDoctypeName);
+                                OnChangeState(Tokens.State.BeforeDOCTYPEName);
                                 data.ReadPosition--;
                             }
                         }
@@ -54,37 +52,34 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                                || currentInputCharacter.Span[0] == '\u000A'
-                                || currentInputCharacter.Span[0] == '\u000C'
-                                || currentInputCharacter.Span[0] == '\u0020')
+                            if (currentInputCharacter.AnyOf('\u0009','\u000A','\u000C','\u0020'))
                             {
                                 // ignore character
                             }
-                            else if (Char.IsLetter(currentInputCharacter.Span[0]) && Char.IsUpper(currentInputCharacter.Span[0]))
+                            else if (currentInputCharacter.IsLetterUpper())
                             {
                                 Token = new Tokens.DOCTYPEToken
                                 {
                                     Name = currentInputCharacter.Span[0].ToString().ToLower()
                                 };
-                                state.State = Tokens.State.DOCTYPEName;
+                                OnChangeState(Tokens.State.DOCTYPEName);
                             }
-                            else if (currentInputCharacter.Span[0] == '\u0000')
+                            else if (currentInputCharacter.AnyOf('\u0000'))
                             {
                                 Token = new Tokens.DOCTYPEToken
                                 {
                                     Name = '\uFFFD'.ToString()
                                 };
-                                state.State = Tokens.State.DOCTYPEName;
+                                OnChangeState(Tokens.State.DOCTYPEName);
                             }
-                            else if (currentInputCharacter.Span[0] == '>')
+                            else if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.Error = ParseError.MissingDoctypeName;
+                                OnSetParseError(ParseError.MissingDoctypeName);
                                 OnEmitToken(new Tokens.DOCTYPEToken
                                 {
                                     ForceQuirks = true
                                 });
-                                state.State = Tokens.State.Data;
+                                OnChangeState(Tokens.State.Data);
                             }
                             else
                             {
@@ -92,7 +87,7 @@ namespace dlNetWeb.TokenizerHandler
                                 {
                                     Name = currentInputCharacter.Span[0].ToString()
                                 };
-                                state.State = Tokens.State.DOCTYPEName;
+                                OnChangeState(Tokens.State.DOCTYPEName);
                             }
                         }
                         else
@@ -110,25 +105,22 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                                || currentInputCharacter.Span[0] == '\u000A'
-                                || currentInputCharacter.Span[0] == '\u000C'
-                                || currentInputCharacter.Span[0] == '\u0020')
+                            if (currentInputCharacter.AnyOf('\u0009', '\u000A', '\u000C', '\u0020'))
                             {
-                                state.State = Tokens.State.AfterDOCTYPEName;
+                                OnChangeState(Tokens.State.AfterDOCTYPEName);
                             }
-                            else if (currentInputCharacter.Span[0] == '>')
+                            else if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.State = Tokens.State.Data;
+                                OnChangeState(Tokens.State.Data);
                                 OnEmitToken(Token);
                             }
-                            else if (Char.IsLetter(currentInputCharacter.Span[0]) && Char.IsUpper(currentInputCharacter.Span[0]))
+                            else if (currentInputCharacter.IsLetterUpper())
                             {
                                 Token.Name += currentInputCharacter.Span[0].ToString().ToLower();
                             }
-                            else if (currentInputCharacter.Span[0] == '\u0000')
+                            else if (currentInputCharacter.AnyOf('\u0000'))
                             {
-                                state.Error = ParseError.UnexpectedNullCharacter;
+                                OnSetParseError(ParseError.UnexpectedNullCharacter);
                                 Token.Name += '\uFFFD'.ToString();
                             }
                             else
@@ -138,7 +130,7 @@ namespace dlNetWeb.TokenizerHandler
                         }
                         else
                         {
-                            state.Error = ParseError.EofInDoctype;
+                            OnSetParseError(ParseError.EofInDoctype);
                             Token.ForceQuirks = true;
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
@@ -150,16 +142,13 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                                || currentInputCharacter.Span[0] == '\u000A'
-                                || currentInputCharacter.Span[0] == '\u000C'
-                                || currentInputCharacter.Span[0] == '\u0020')
+                            if (currentInputCharacter.AnyOf('\u0009', '\u000A', '\u000C', '\u0020'))
                             {
                                 // ignore character
                             }
-                            else if (currentInputCharacter.Span[0] == '>')
+                            else if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.State = Tokens.State.Data;
+                                OnChangeState(Tokens.State.Data);
                                 OnEmitToken(Token);
                             }
                             else
@@ -169,25 +158,25 @@ namespace dlNetWeb.TokenizerHandler
                                 if (string.Equals("PUBLIC", afterDocTypeValue, StringComparison.OrdinalIgnoreCase))
                                 {
                                     data.ReadPosition += 5;
-                                    state.State = Tokens.State.AfterDOCTYPEPublicKeyword;
+                                    OnChangeState(Tokens.State.AfterDOCTYPEPublicKeyword);
                                 }
                                 else if (string.Equals("SYSTEM", afterDocTypeValue, StringComparison.OrdinalIgnoreCase))
                                 {
                                     data.ReadPosition += 5;
-                                    state.State = Tokens.State.AfterDOCTYPESystemKeyword;
+                                    OnChangeState(Tokens.State.AfterDOCTYPESystemKeyword);
                                 }
                                 else
                                 {
-                                    state.Error = ParseError.InvalidCharacterSequenceAfterDoctypeName;
+                                    OnSetParseError(ParseError.InvalidCharacterSequenceAfterDoctypeName);
                                     Token.ForceQuirks = true;
                                     data.ReadPosition--;
-                                    state.State = Tokens.State.BogusDOCTYPE;
+                                    OnChangeState(Tokens.State.BogusDOCTYPE);
                                 }
                             }
                         }
                         else
                         {
-                            state.Error = ParseError.EofInDoctype;
+                            OnSetParseError(ParseError.EofInDoctype);
                             Token.ForceQuirks = true;
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());

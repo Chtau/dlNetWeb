@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using dlNetWeb.Extensions;
 
 namespace dlNetWeb.TokenizerHandler
 {
@@ -20,13 +21,13 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '>')
+                            if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.State = Tokens.State.Data;
+                                OnChangeState(Tokens.State.Data);
                                 OnEmitToken(Token);
-                            } else if (currentInputCharacter.Span[0] == '\u0000')
+                            } else if (currentInputCharacter.AnyOf('\u0000'))
                             {
-                                state.Error = ParseError.UnexpectedNullCharacter;
+                                OnSetParseError(ParseError.UnexpectedNullCharacter);
                                 Token.Value += '\uFFFD';
                             } else
                             {
@@ -43,20 +44,20 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '-')
+                            if (currentInputCharacter.AnyOf('-'))
                             {
-                                state.State = Tokens.State.CommentStartDash;
+                                OnChangeState(Tokens.State.CommentStartDash);
                             }
-                            else if (currentInputCharacter.Span[0] == '>')
+                            else if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.Error = ParseError.AbruptClosingOfEmptyComment;
-                                state.State = Tokens.State.Data;
+                                OnSetParseError(ParseError.AbruptClosingOfEmptyComment);
+                                OnChangeState(Tokens.State.Data);
                                 OnEmitToken(Token);
                             }
                             else
                             {
                                 data.ReadPosition--;
-                                state.State = Tokens.State.Comment;
+                                OnChangeState(Tokens.State.Comment);
                             }
                         }
                         break;
@@ -64,26 +65,26 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '-')
+                            if (currentInputCharacter.AnyOf('-'))
                             {
-                                state.State = Tokens.State.CommentEnd;
+                                OnChangeState(Tokens.State.CommentEnd);
                             }
-                            else if (currentInputCharacter.Span[0] == '>')
+                            else if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.Error = ParseError.AbruptClosingOfEmptyComment;
-                                state.State = Tokens.State.Data;
+                                OnSetParseError(ParseError.AbruptClosingOfEmptyComment);
+                                OnChangeState(Tokens.State.Data);
                                 OnEmitToken(Token);
                             }
                             else
                             {
                                 Token.Value += '\u002D';
                                 data.ReadPosition--;
-                                state.State = Tokens.State.Comment;
+                                OnChangeState(Tokens.State.Comment);
                             }
                         }
                         else
                         {
-                            state.Error = ParseError.EofInComment;
+                            OnSetParseError(ParseError.EofInComment);
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
@@ -93,18 +94,18 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '<')
+                            if (currentInputCharacter.AnyOf('<'))
                             {
                                 Token.Value += currentInputCharacter.Span[0];
-                                state.State = Tokens.State.CommentLessThanSign;
+                                OnChangeState(Tokens.State.CommentLessThanSign);
                             }
-                            else if (currentInputCharacter.Span[0] == '-')
+                            else if (currentInputCharacter.AnyOf('-'))
                             {
-                                state.State = Tokens.State.CommentEndDash;
+                                OnChangeState(Tokens.State.CommentEndDash);
                             }
-                            else if (currentInputCharacter.Span[0] == '\u0000')
+                            else if (currentInputCharacter.AnyOf('\u0000'))
                             {
-                                state.Error = ParseError.UnexpectedNullCharacter;
+                                OnSetParseError(ParseError.UnexpectedNullCharacter);
                                 Token.Value += '\uFFFD';
                             }
                             else
@@ -114,7 +115,7 @@ namespace dlNetWeb.TokenizerHandler
                         }
                         else
                         {
-                            state.Error = ParseError.EofInComment;
+                            OnSetParseError(ParseError.EofInComment);
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
@@ -124,19 +125,19 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '!')
+                            if (currentInputCharacter.AnyOf('!'))
                             {
-                                state.State = Tokens.State.CommentLessThanSignBang;
+                                OnChangeState(Tokens.State.CommentLessThanSignBang);
                                 Token.Value += currentInputCharacter.Span[0];
                             }
-                            else if (currentInputCharacter.Span[0] == '<')
+                            else if (currentInputCharacter.AnyOf('<'))
                             {
                                 Token.Value += currentInputCharacter.Span[0];
                             }
                             else
                             {
                                 data.ReadPosition--;
-                                state.State = Tokens.State.Comment;
+                                OnChangeState(Tokens.State.Comment);
                             }
                         }
                         break;
@@ -144,14 +145,14 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '-')
+                            if (currentInputCharacter.AnyOf('-'))
                             {
-                                state.State = Tokens.State.CommentLessThanSignBangDash;
+                                OnChangeState(Tokens.State.CommentLessThanSignBangDash);
                             }
                             else
                             {
                                 data.ReadPosition--;
-                                state.State = Tokens.State.Comment;
+                                OnChangeState(Tokens.State.Comment);
                             }
                         }
                         break;
@@ -159,14 +160,14 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '-')
+                            if (currentInputCharacter.AnyOf('-'))
                             {
-                                state.State = Tokens.State.CommentLessThanSignBangDashDash;
+                                OnChangeState(Tokens.State.CommentLessThanSignBangDashDash);
                             }
                             else
                             {
                                 data.ReadPosition--;
-                                state.State = Tokens.State.CommentEndDash;
+                                OnChangeState(Tokens.State.CommentEndDash);
                             }
                         }
                         break;
@@ -174,21 +175,21 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '>')
+                            if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.State = Tokens.State.CommentEnd;
+                                OnChangeState(Tokens.State.CommentEnd);
                                 data.ReadPosition--;
                             }
                             else
                             {
-                                state.Error = ParseError.NestedComment;
-                                state.State = Tokens.State.CommentEnd;
+                                OnSetParseError(ParseError.NestedComment);
+                                OnChangeState(Tokens.State.CommentEnd);
                                 data.ReadPosition--;
                             }
                         }
                         else
                         {
-                            state.State = Tokens.State.CommentEnd;
+                            OnChangeState(Tokens.State.CommentEnd);
                             data.ReadPosition--;
                         }
                         break;
@@ -196,19 +197,19 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '-')
+                            if (currentInputCharacter.AnyOf('-'))
                             {
-                                state.State = Tokens.State.CommentEnd;
+                                OnChangeState(Tokens.State.CommentEnd);
                             }
                             else
                             {
                                 Token.Value += '\u002D';
                                 data.ReadPosition--;
-                                state.State = Tokens.State.Comment;
+                                OnChangeState(Tokens.State.Comment);
                             }
                         } else
                         {
-                            state.Error = ParseError.EofInComment;
+                            OnSetParseError(ParseError.EofInComment);
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
@@ -218,15 +219,15 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '>')
+                            if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.State = Tokens.State.Data;
+                                OnChangeState(Tokens.State.Data);
                                 OnEmitToken(Token);
-                            } else if (currentInputCharacter.Span[0] == '!')
+                            } else if (currentInputCharacter.AnyOf('!'))
                             {
-                                state.State = Tokens.State.CommentEndBang;
+                                OnChangeState(Tokens.State.CommentEndBang);
                             }
-                            else if (currentInputCharacter.Span[0] == '-')
+                            else if (currentInputCharacter.AnyOf('-'))
                             {
                                 Token.Value += '\u002D';
                             }
@@ -234,12 +235,12 @@ namespace dlNetWeb.TokenizerHandler
                             {
                                 Token.Value += '\u002D';
                                 data.ReadPosition--;
-                                state.State = Tokens.State.Comment;
+                                OnChangeState(Tokens.State.Comment);
                             }
                         }
                         else
                         {
-                            state.Error = ParseError.EofInComment;
+                            OnSetParseError(ParseError.EofInComment);
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
@@ -249,27 +250,27 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '-')
+                            if (currentInputCharacter.AnyOf('-'))
                             {
                                 Token.Value += '\u002D';
-                                state.State = Tokens.State.CommentEndDash;
+                                OnChangeState(Tokens.State.CommentEndDash);
                             }
-                            else if (currentInputCharacter.Span[0] == '>')
+                            else if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.Error = ParseError.IncorrectlyClosedComment;
-                                state.State = Tokens.State.Data;
+                                OnSetParseError(ParseError.IncorrectlyClosedComment);
+                                OnChangeState(Tokens.State.Data);
                                 OnEmitToken(Token);
                             } else
                             {
                                 Token.Value += '\u002D';
                                 Token.Value += '\u0021';
                                 data.ReadPosition--;
-                                state.State = Tokens.State.Comment;
+                                OnChangeState(Tokens.State.Comment);
                             }
                         }
                         else
                         {
-                            state.Error = ParseError.EofInComment;
+                            OnSetParseError(ParseError.EofInComment);
                             OnEmitToken(Token);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;

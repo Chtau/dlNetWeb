@@ -1,4 +1,5 @@
-﻿using System;
+﻿using dlNetWeb.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -20,41 +21,41 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '!')
+                            if (currentInputCharacter.AnyOf('!'))
                             {
-                                state.State = Tokens.State.MarkupDeclarationOpen;
+                                OnChangeState(Tokens.State.MarkupDeclarationOpen);
                             }
-                            else if (currentInputCharacter.Span[0] == '/')
+                            else if (currentInputCharacter.AnyOf('/'))
                             {
-                                state.State = Tokens.State.EndTagOpen;
+                                OnChangeState(Tokens.State.EndTagOpen);
                             }
-                            else if (Char.IsLetter(currentInputCharacter.Span[0]))
+                            else if (currentInputCharacter.IsLetter())
                             {
                                 Token = new Tokens.StartTagToken
                                 {
                                     TagName = string.Empty
                                 };
                                 data.ReadPosition--;
-                                state.State = Tokens.State.TagName;
+                                OnChangeState(Tokens.State.TagName);
                             }
-                            else if (currentInputCharacter.Span[0] == '?')
+                            else if (currentInputCharacter.AnyOf('?'))
                             {
-                                state.Error = ParseError.UnexpectedQuestionMarkInsteadOfTagName;
+                                OnSetParseError(ParseError.UnexpectedQuestionMarkInsteadOfTagName);
                                 state.Token = new Tokens.CommantToken { Value = string.Empty };
                                 data.ReadPosition--;
-                                state.State = Tokens.State.BogusComment;
+                                OnChangeState(Tokens.State.BogusComment);
                             }
                             else
                             {
-                                state.Error = ParseError.InvalidFirstCharacterOfTagName;
+                                OnSetParseError(ParseError.InvalidFirstCharacterOfTagName);
                                 OnEmitToken(new Tokens.CharacterToken { Value = '<'.ToString() });
                                 data.ReadPosition--;
-                                state.State = Tokens.State.Data;
+                                OnChangeState(Tokens.State.Data);
                             }
                         }
                         else
                         {
-                            state.Error = ParseError.EofBeforeTagName;
+                            OnSetParseError(ParseError.EofBeforeTagName);
                             OnEmitToken(new Tokens.CharacterToken { Value = '<'.ToString() });
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
@@ -65,31 +66,31 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (Char.IsLetter(currentInputCharacter.Span[0]))
+                            if (currentInputCharacter.IsLetter())
                             {
                                 Token = new Tokens.EndTagToken
                                 {
                                     TagName = string.Empty
                                 };
                                 data.ReadPosition--;
-                                state.State = Tokens.State.TagName;
+                                OnChangeState(Tokens.State.TagName);
                             }
-                            else if (currentInputCharacter.Span[0] == '>')
+                            else if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.Error = ParseError.MissingEndTagName;
-                                state.State = Tokens.State.Data;
+                                OnSetParseError(ParseError.MissingEndTagName);
+                                OnChangeState(Tokens.State.Data);
                             }
                             else
                             {
-                                state.Error = ParseError.InvalidFirstCharacterOfTagName;
+                                OnSetParseError(ParseError.InvalidFirstCharacterOfTagName);
                                 state.Token = new Tokens.CommantToken { Value = string.Empty };
                                 data.ReadPosition--;
-                                state.State = Tokens.State.BogusComment;
+                                OnChangeState(Tokens.State.BogusComment);
                             }
                         }
                         else
                         {
-                            state.Error = ParseError.EofBeforeTagName;
+                            OnSetParseError(ParseError.EofBeforeTagName);
                             OnEmitToken(new Tokens.CharacterToken { Value = '<'.ToString() });
                             OnEmitToken(new Tokens.CharacterToken { Value = '/'.ToString() });
                             OnEmitToken(new Tokens.EndOfFileToken());
@@ -101,25 +102,22 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                                || currentInputCharacter.Span[0] == '\u000A'
-                                || currentInputCharacter.Span[0] == '\u000C'
-                                || currentInputCharacter.Span[0] == '\u0020')
+                            if (currentInputCharacter.AnyOf('\u0009','\u000A','\u000C','\u0020'))
                             {
-                                state.State = Tokens.State.BeforeAttributeName;
-                            } else if (currentInputCharacter.Span[0] == '/')
+                                OnChangeState(Tokens.State.BeforeAttributeName);
+                            } else if (currentInputCharacter.AnyOf('/'))
                             {
-                                state.State = Tokens.State.SelfClosingStartTag;
-                            } else if (currentInputCharacter.Span[0] == '>')
+                                OnChangeState(Tokens.State.SelfClosingStartTag);
+                            } else if (currentInputCharacter.AnyOf('>'))
                             {
                                 OnEmitToken(Token);
-                                state.State = Tokens.State.Data;
-                            } else if (Char.IsLetter(currentInputCharacter.Span[0]) && Char.IsUpper(currentInputCharacter.Span[0]))
+                                OnChangeState(Tokens.State.Data);
+                            } else if (currentInputCharacter.IsLetterUpper())
                             {
                                 Token.TagName += currentInputCharacter.Span[0].ToString().ToLower();
-                            } else if (currentInputCharacter.Span[0] == '\u0000')
+                            } else if (currentInputCharacter.AnyOf('\u0000'))
                             {
-                                state.Error = ParseError.UnexpectedNullCharacter;
+                                OnSetParseError(ParseError.UnexpectedNullCharacter);
                                 Token.TagName += '\uFFFD';
                             } else
                             {
@@ -128,7 +126,7 @@ namespace dlNetWeb.TokenizerHandler
                         }
                         else
                         {
-                            state.Error = ParseError.EofInTag;
+                            OnSetParseError(ParseError.EofInTag);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
                             exitLoop = true;
@@ -138,20 +136,20 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '>')
+                            if (currentInputCharacter.AnyOf('>'))
                             {
                                 Token.SelfClosing = true;
                                 OnEmitToken(Token);
-                                state.State = Tokens.State.Data;
+                                OnChangeState(Tokens.State.Data);
                             } else
                             {
-                                state.Error = ParseError.UnexpectedSolidusInTag;
+                                OnSetParseError(ParseError.UnexpectedSolidusInTag);
                                 data.ReadPosition--;
-                                state.State = Tokens.State.BeforeAttributeName;
+                                OnChangeState(Tokens.State.BeforeAttributeName);
                             }
                         } else
                         {
-                            state.Error = ParseError.EofInTag;
+                            OnSetParseError(ParseError.EofInTag);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
                             exitLoop = true;

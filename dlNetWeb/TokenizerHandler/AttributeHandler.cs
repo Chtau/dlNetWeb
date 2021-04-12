@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using dlNetWeb.Extensions;
 
 namespace dlNetWeb.TokenizerHandler
 {
@@ -22,26 +23,22 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                                || currentInputCharacter.Span[0] == '\u000A'
-                                || currentInputCharacter.Span[0] == '\u000C'
-                                || currentInputCharacter.Span[0] == '\u0020')
+                            if (currentInputCharacter.AnyOf('\u0009','\u000A','\u000C','\u0020'))
                             {
                                 // ignore
-                            } else if (currentInputCharacter.Span[0] == '/'
-                                || currentInputCharacter.Span[0] == '>')
+                            } else if (currentInputCharacter.AnyOf('/', '>'))
                             {
                                 data.ReadPosition--;
-                                state.State = Tokens.State.AfterAttributeName;
-                            } else if (currentInputCharacter.Span[0] == '=')
+                                OnChangeState(Tokens.State.AfterAttributeName);
+                            } else if (currentInputCharacter.AnyOf('='))
                             {
-                                state.Error = ParseError.UnexpectedEqualsSignBeforeAttributeName;
+                                OnSetParseError(ParseError.UnexpectedEqualsSignBeforeAttributeName);
                                 Token.Attributes.Add(new Tokens.TokenAttribute
                                 {
                                     Name = currentInputCharacter.Span[0].ToString(),
                                     Value = string.Empty
                                 });
-                                state.State = Tokens.State.AttributeName;
+                                OnChangeState(Tokens.State.AttributeName);
                             } else
                             {
                                 Token.Attributes.Add(new Tokens.TokenAttribute
@@ -50,42 +47,35 @@ namespace dlNetWeb.TokenizerHandler
                                     Value = string.Empty
                                 });
                                 data.ReadPosition--;
-                                state.State = Tokens.State.AttributeName;
+                                OnChangeState(Tokens.State.AttributeName);
                             }
                         } else
                         {
                             data.ReadPosition--;
-                            state.State = Tokens.State.AfterAttributeName;
+                            OnChangeState(Tokens.State.AfterAttributeName);
                         }
                         break;
                     case Tokens.State.AttributeName:
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                               || currentInputCharacter.Span[0] == '\u000A'
-                               || currentInputCharacter.Span[0] == '\u000C'
-                               || currentInputCharacter.Span[0] == '\u0020'
-                               || currentInputCharacter.Span[0] == '/'
-                               || currentInputCharacter.Span[0] == '>')
+                            if (currentInputCharacter.AnyOf('\u0009','\u000A','\u000C','\u0020','/','>'))
                             {
                                 data.ReadPosition--;
-                                state.State = Tokens.State.AfterAttributeName;
-                            } else if (currentInputCharacter.Span[0] == '=')
+                                OnChangeState(Tokens.State.AfterAttributeName);
+                            } else if (currentInputCharacter.AnyOf('='))
                             {
-                                state.State = Tokens.State.BeforeAttributeValue;
-                            } else if (char.IsLetter(currentInputCharacter.Span[0]) && char.IsUpper(currentInputCharacter.Span[0]))
+                                OnChangeState(Tokens.State.BeforeAttributeValue);
+                            } else if (currentInputCharacter.IsLetterUpper())
                             {
                                 Token.Attributes[^1].Name += currentInputCharacter.Span[0].ToString().ToLower();
-                            } else if (currentInputCharacter.Span[0] == '\u0000')
+                            } else if (currentInputCharacter.AnyOf('\u0000'))
                             {
-                                state.Error = ParseError.UnexpectedNullCharacter;
+                                OnSetParseError(ParseError.UnexpectedNullCharacter);
                                 Token.Attributes[^1].Name += '\uFFFD';
-                            } else if (currentInputCharacter.Span[0] == '\u0022'
-                                || currentInputCharacter.Span[0] == '\u0027'
-                                || currentInputCharacter.Span[0] == '<')
+                            } else if (currentInputCharacter.AnyOf('\u0022','\u0027','<'))
                             {
-                                state.Error = ParseError.UnexpectedCharacterInAttributeName;
+                                OnSetParseError(ParseError.UnexpectedCharacterInAttributeName);
                                 Token.Attributes[^1].Name += currentInputCharacter.Span[0].ToString();
                             } else
                             {
@@ -93,7 +83,7 @@ namespace dlNetWeb.TokenizerHandler
                             }
                         } else
                         {
-                            state.State = Tokens.State.AfterAttributeName;
+                            OnChangeState(Tokens.State.AfterAttributeName);
                             data.ReadPosition--;
                         }
                         break;
@@ -101,23 +91,20 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                               || currentInputCharacter.Span[0] == '\u000A'
-                               || currentInputCharacter.Span[0] == '\u000C'
-                               || currentInputCharacter.Span[0] == '\u0020')
+                            if (currentInputCharacter.AnyOf('\u0009','\u000A','\u000C','\u0020'))
                             {
                                 // ignore
-                            } else if (currentInputCharacter.Span[0] == '/')
+                            } else if (currentInputCharacter.AnyOf('/'))
                             {
-                                state.State = Tokens.State.SelfClosingStartTag;
+                                OnChangeState(Tokens.State.SelfClosingStartTag);
                             }
-                            else if (currentInputCharacter.Span[0] == '=')
+                            else if (currentInputCharacter.AnyOf('='))
                             {
-                                state.State = Tokens.State.BeforeAttributeValue;
+                                OnChangeState(Tokens.State.BeforeAttributeValue);
                             }
-                            else if (currentInputCharacter.Span[0] == '>')
+                            else if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.State = Tokens.State.Data;
+                                OnChangeState(Tokens.State.Data);
                                 OnEmitToken(Token);
                             } else
                             {
@@ -127,11 +114,11 @@ namespace dlNetWeb.TokenizerHandler
                                     Value = string.Empty
                                 });
                                 data.ReadPosition--;
-                                state.State = Tokens.State.AttributeName;
+                                OnChangeState(Tokens.State.AttributeName);
                             }
                         } else
                         {
-                            state.Error = ParseError.EofInTag;
+                            OnSetParseError(ParseError.EofInTag);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
                         }
@@ -140,52 +127,49 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                               || currentInputCharacter.Span[0] == '\u000A'
-                               || currentInputCharacter.Span[0] == '\u000C'
-                               || currentInputCharacter.Span[0] == '\u0020')
+                            if (currentInputCharacter.AnyOf('\u0009','\u000A','\u000C','\u0020'))
                             {
                                 // ignore
-                            } else if (currentInputCharacter.Span[0] == '\u0022')
+                            } else if (currentInputCharacter.AnyOf('\u0022'))
                             {
-                                state.State = Tokens.State.AttributeValueDoubleQuoted;
+                                OnChangeState(Tokens.State.AttributeValueDoubleQuoted);
                             }
-                            else if (currentInputCharacter.Span[0] == '\u0027')
+                            else if (currentInputCharacter.AnyOf('\u0027'))
                             {
-                                state.State = Tokens.State.AttributeValueSingleQuoted;
+                                OnChangeState(Tokens.State.AttributeValueSingleQuoted);
                             }
-                            else if (currentInputCharacter.Span[0] == '>')
+                            else if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.Error = ParseError.MissingAttributeValue;
-                                state.State = Tokens.State.Data;
+                                OnSetParseError(ParseError.MissingAttributeValue);
+                                OnChangeState(Tokens.State.Data);
                                 OnEmitToken(Token);
                             } else
                             {
                                 data.ReadPosition--;
-                                state.State = Tokens.State.AttributeValueUnquoted;
+                                OnChangeState(Tokens.State.AttributeValueUnquoted);
                             }
                         }
                         else
                         {
                             data.ReadPosition--;
-                            state.State = Tokens.State.AttributeValueUnquoted;
+                            OnChangeState(Tokens.State.AttributeValueUnquoted);
                         }
                         break;
                     case Tokens.State.AttributeValueDoubleQuoted:
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '\u0022')
+                            if (currentInputCharacter.AnyOf('\u0022'))
                             {
-                                state.State = Tokens.State.AfterAttributeValueQuoted;
-                            } else if (currentInputCharacter.Span[0] == '\u0026')
+                                OnChangeState(Tokens.State.AfterAttributeValueQuoted);
+                            } else if (currentInputCharacter.AnyOf('\u0026'))
                             {
                                 state.ReturnState = Tokens.State.AttributeValueDoubleQuoted;
-                                state.State = Tokens.State.CharacterReference;
+                                OnChangeState(Tokens.State.CharacterReference);
                             }
-                            else if (currentInputCharacter.Span[0] == '\u0000')
+                            else if (currentInputCharacter.AnyOf('\u0000'))
                             {
-                                state.Error = ParseError.UnexpectedNullCharacter;
+                                OnSetParseError(ParseError.UnexpectedNullCharacter);
                                 Token.Attributes[^1].Value += '\uFFFD';
                             } else
                             {
@@ -193,7 +177,7 @@ namespace dlNetWeb.TokenizerHandler
                             }
                         } else
                         {
-                            state.Error = ParseError.EofInTag;
+                            OnSetParseError(ParseError.EofInTag);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
                         }
@@ -202,18 +186,18 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '\u0027')
+                            if (currentInputCharacter.AnyOf('\u0027'))
                             {
-                                state.State = Tokens.State.AfterAttributeValueQuoted;
+                                OnChangeState(Tokens.State.AfterAttributeValueQuoted);
                             }
-                            else if (currentInputCharacter.Span[0] == '\u0026')
+                            else if (currentInputCharacter.AnyOf('\u0026'))
                             {
                                 state.ReturnState = Tokens.State.AttributeValueSingleQuoted;
-                                state.State = Tokens.State.CharacterReference;
+                                OnChangeState(Tokens.State.CharacterReference);
                             }
-                            else if (currentInputCharacter.Span[0] == '\u0000')
+                            else if (currentInputCharacter.AnyOf('\u0000'))
                             {
-                                state.Error = ParseError.UnexpectedNullCharacter;
+                                OnSetParseError(ParseError.UnexpectedNullCharacter);
                                 Token.Attributes[^1].Value += '\uFFFD';
                             }
                             else
@@ -223,7 +207,7 @@ namespace dlNetWeb.TokenizerHandler
                         }
                         else
                         {
-                            state.Error = ParseError.EofInTag;
+                            OnSetParseError(ParseError.EofInTag);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
                         }
@@ -232,33 +216,26 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                               || currentInputCharacter.Span[0] == '\u000A'
-                               || currentInputCharacter.Span[0] == '\u000C'
-                               || currentInputCharacter.Span[0] == '\u0020')
+                            if (currentInputCharacter.AnyOf('\u0009','\u000A','\u000C','\u0020'))
                             {
-                                state.State = Tokens.State.BeforeAttributeName;
-                            } else if (currentInputCharacter.Span[0] == '\u0026')
+                                OnChangeState(Tokens.State.BeforeAttributeName);
+                            } else if (currentInputCharacter.AnyOf('\u0026'))
                             {
                                 state.ReturnState = Tokens.State.AttributeValueUnquoted;
-                                state.State = Tokens.State.CharacterReference;
+                                OnChangeState(Tokens.State.CharacterReference);
                             }
-                            else if (currentInputCharacter.Span[0] == '>')
+                            else if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.State = Tokens.State.Data;
+                                OnChangeState(Tokens.State.Data);
                                 OnEmitToken(Token);
                             }
-                            else if (currentInputCharacter.Span[0] == '\u0000')
+                            else if (currentInputCharacter.AnyOf('\u0000'))
                             {
-                                state.Error = ParseError.UnexpectedNullCharacter;
+                                OnSetParseError(ParseError.UnexpectedNullCharacter);
                                 Token.Attributes[^1].Value += '\uFFFD';
-                            } else if (currentInputCharacter.Span[0] == '\u0022'
-                               || currentInputCharacter.Span[0] == '\u0027'
-                               || currentInputCharacter.Span[0] == '\u003C'
-                               || currentInputCharacter.Span[0] == '\u003D'
-                               || currentInputCharacter.Span[0] == '\u0060')
+                            } else if (currentInputCharacter.AnyOf('\u0022','\u0027','\u003C','\u003D','\u0060'))
                             {
-                                state.Error = ParseError.UnexpectedCharacterInUnquotedAttributeValue;
+                                OnSetParseError(ParseError.UnexpectedCharacterInUnquotedAttributeValue);
                                 Token.Attributes[^1].Value += currentInputCharacter.Span[0];
                             } else
                             {
@@ -266,7 +243,7 @@ namespace dlNetWeb.TokenizerHandler
                             }
                         } else
                         {
-                            state.Error = ParseError.EofInTag;
+                            OnSetParseError(ParseError.EofInTag);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
                         }
@@ -275,29 +252,26 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.Span[0] == '\u0009'
-                               || currentInputCharacter.Span[0] == '\u000A'
-                               || currentInputCharacter.Span[0] == '\u000C'
-                               || currentInputCharacter.Span[0] == '\u0020')
+                            if (currentInputCharacter.AnyOf('\u0009','\u000A','\u000C','\u0020'))
                             {
-                                state.State = Tokens.State.BeforeAttributeName;
-                            } else if (currentInputCharacter.Span[0] == '/')
+                                OnChangeState(Tokens.State.BeforeAttributeName);
+                            } else if (currentInputCharacter.AnyOf('/'))
                             {
-                                state.State = Tokens.State.SelfClosingStartTag;
+                                OnChangeState(Tokens.State.SelfClosingStartTag);
                             }
-                            else if (currentInputCharacter.Span[0] == '>')
+                            else if (currentInputCharacter.AnyOf('>'))
                             {
-                                state.State = Tokens.State.Data;
+                                OnChangeState(Tokens.State.Data);
                                 OnEmitToken(Token);
                             } else
                             {
-                                state.Error = ParseError.MissingWhitespaceBetweenAttributes;
+                                OnSetParseError(ParseError.MissingWhitespaceBetweenAttributes);
                                 data.ReadPosition--;
-                                state.State = Tokens.State.BeforeAttributeName;
+                                OnChangeState(Tokens.State.BeforeAttributeName);
                             }
                         } else
                         {
-                            state.Error = ParseError.EofInTag;
+                            OnSetParseError(ParseError.EofInTag);
                             OnEmitToken(new Tokens.EndOfFileToken());
                             isEOF = true;
                         }
