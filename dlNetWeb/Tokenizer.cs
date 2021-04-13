@@ -19,6 +19,7 @@ namespace dlNetWeb
         private readonly TokenizerHandler.CommentHandler _commentHandler = new TokenizerHandler.CommentHandler();
         private readonly TokenizerHandler.CDATAHandler _cDATAHandler = new TokenizerHandler.CDATAHandler();
         private readonly TokenizerHandler.RCDATAHandler _rCDATAHandler = new TokenizerHandler.RCDATAHandler();
+        private readonly TokenizerHandler.RAWTEXTHandler _rAWTEXTHandler = new TokenizerHandler.RAWTEXTHandler();
 
         public ParseError Error => _sharedState.Error;
 
@@ -188,6 +189,13 @@ namespace dlNetWeb
                     case Tokens.State.RCDATAEndTagOpen:
                     case Tokens.State.RCDATAEndTagName:
                         if (_rCDATAHandler.Run())
+                            exitLoop = true;
+                        break;
+                    case Tokens.State.RAWTEXT:
+                    case Tokens.State.RAWTEXTLessThanSign:
+                    case Tokens.State.RAWTEXTEndTagOpen:
+                    case Tokens.State.RAWTEXTEndTagName:
+                        if (_rAWTEXTHandler.Run())
                             exitLoop = true;
                         break;
                     default:

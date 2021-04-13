@@ -55,5 +55,19 @@ namespace dlNetWeb.TokenizerHandler
                 return state.Tokens[^1];
             return null;
         }
+
+        internal bool OnHasAppropriateEndTagToken(string tagName)
+        {
+            var token = state.Tokens.FindLast(x =>
+            {
+                if (x is Tokens.StartTagToken token && token.TagName == tagName)
+                {
+                    return true;
+                }
+                else
+                    return false;
+            });
+            return token != null;
+        }
     }
 }

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace dlNetWeb.TokenizerHandler
 {
-    public class RCDATAHandler : BaseHandler<Tokens.BaseTagToken>
+    public class RAWTEXTHandler : BaseHandler<Tokens.BaseTagToken>
     {
         internal override bool OnRun()
         {
@@ -17,17 +17,13 @@ namespace dlNetWeb.TokenizerHandler
             {
                 switch (state.State)
                 {
-                    case Tokens.State.RCDATA:
+                    case Tokens.State.RAWTEXT:
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.AnyOf('\u0026'))
+                            if (currentInputCharacter.AnyOf('\u003C'))
                             {
-                                state.ReturnState = Tokens.State.RCDATA;
-                                OnChangeState(Tokens.State.CharacterReference);
-                            } else if (currentInputCharacter.AnyOf('\u003C'))
-                            {
-                                OnChangeState(Tokens.State.RCDATALessThanSign);
+                                OnChangeState(Tokens.State.RAWTEXTLessThanSign);
                             }
                             else if (currentInputCharacter.AnyOf('\u0000'))
                             {
@@ -46,91 +42,83 @@ namespace dlNetWeb.TokenizerHandler
                             exitLoop = true;
                         }
                         break;
-                    case Tokens.State.RCDATALessThanSign:
+                    case Tokens.State.RAWTEXTLessThanSign:
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
                             if (currentInputCharacter.AnyOf('\u002F'))
                             {
                                 state.TemporaryBuffer = string.Empty;
-                                OnChangeState(Tokens.State.RCDATAEndTagOpen);
+                                OnChangeState(Tokens.State.RAWTEXTEndTagOpen);
                             }
                             else
                             {
                                 OnEmitToken(new Tokens.CharacterToken { Value = '\u003C'.ToString() });
                                 data.ReadPosition--;
-                                OnChangeState(Tokens.State.RCDATA);
+                                OnChangeState(Tokens.State.RAWTEXT);
                             }
                         }
                         break;
-                    case Tokens.State.RCDATAEndTagOpen:
+                    case Tokens.State.RAWTEXTEndTagOpen:
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
                             if (currentInputCharacter.IsLetter())
                             {
-                                Token = new Tokens.EndTagToken
-                                {
-                                    TagName = string.Empty
-                                };
-                                data.ReadPosition--;
-                                OnChangeState(Tokens.State.RCDATAEndTagName);
+                                Token = new Tokens.EndTagToken { TagName = string.Empty };
+                                OnChangeState(Tokens.State.RAWTEXTEndTagName);
                             }
                             else
                             {
                                 OnEmitToken(new Tokens.CharacterToken { Value = '\u003C'.ToString() });
                                 OnEmitToken(new Tokens.CharacterToken { Value = '\u002F'.ToString() });
                                 data.ReadPosition--;
-                                OnChangeState(Tokens.State.RCDATA);
+                                OnChangeState(Tokens.State.RAWTEXT);
                             }
                         }
                         break;
-                    case Tokens.State.RCDATAEndTagName:
+                    case Tokens.State.RAWTEXTEndTagName:
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            bool changed = false;
+                            bool changes = false;
                             if (currentInputCharacter.AnyOf('\u0009', '\u000A', '\u000C', '\u0020'))
                             {
-                                if (OnHasAppropriateEndTagToken(Token.TagName))
+                                if (OnHasAppropriateEndTagToken(Token?.TagName))
                                 {
                                     OnChangeState(Tokens.State.BeforeAttributeName);
-                                    changed = true;
+                                    changes = true;
                                 }
                             } else if (currentInputCharacter.AnyOf('\u002F'))
                             {
-                                if (OnHasAppropriateEndTagToken(Token.TagName))
+                                if (OnHasAppropriateEndTagToken(Token?.TagName))
                                 {
                                     OnChangeState(Tokens.State.SelfClosingStartTag);
-                                    changed = true;
+                                    changes = true;
                                 }
                             }
-                            else if (currentInputCharacter.AnyOf('\u003F'))
+                            else if (currentInputCharacter.AnyOf('\u003E'))
                             {
-                                if (OnHasAppropriateEndTagToken(Token.TagName))
+                                if (OnHasAppropriateEndTagToken(Token?.TagName))
                                 {
                                     OnChangeState(Tokens.State.Data);
                                     OnEmitToken(Token);
-                                    changed = true;
+                                    changes = true;
                                 }
                             }
                             else if (currentInputCharacter.IsLetterUpper())
                             {
-                                if (OnHasAppropriateEndTagToken(Token.TagName))
-                                {
-                                    Token.TagName += currentInputCharacter.Span[0].ToString().ToLower();
-                                    state.TemporaryBuffer += currentInputCharacter.Span[0];
-                                }
+                                Token.TagName += currentInputCharacter.Span[0].ToString().ToLower();
+                                state.TemporaryBuffer += currentInputCharacter.Span[0];
+                                changes = true;
                             }
                             else if (currentInputCharacter.IsLetterLower())
                             {
-                                if (OnHasAppropriateEndTagToken(Token.TagName))
-                                {
-                                    Token.TagName += currentInputCharacter.Span[0];
-                                    state.TemporaryBuffer += currentInputCharacter.Span[0];
-                                }
+                                Token.TagName += currentInputCharacter.Span[0];
+                                state.TemporaryBuffer += currentInputCharacter.Span[0];
+                                changes = true;
                             }
-                            if (!changed)
+                            if (changes)
                             {
                                 OnEmitToken(new Tokens.CharacterToken { Value = '\u003C'.ToString() });
                                 OnEmitToken(new Tokens.CharacterToken { Value = '\u002F'.ToString() });
@@ -142,11 +130,12 @@ namespace dlNetWeb.TokenizerHandler
                                     }
                                 }
                                 data.ReadPosition--;
-                                OnChangeState(Tokens.State.RCDATA);
+                                OnChangeState(Tokens.State.RAWTEXT);
                             }
                         }
                         break;
                     default:
+                        exitLoop = true;
                         break;
                 }
             } while (!exitLoop);
