@@ -150,6 +150,9 @@ namespace dlNetWeb
                     case Tokens.State.NumericCharacterReference:
                     case Tokens.State.HexadecimalCharacterReferenceStart:
                     case Tokens.State.DecimalCharacterReferenceStart:
+                    case Tokens.State.HexadecimalCharacterReference:
+                    case Tokens.State.DecimalCharacterReference:
+                    case Tokens.State.NumericCharacterReferenceEnd:
                         if (_characterReferenceHandler.Run())
                             exitLoop = true;
                         break;

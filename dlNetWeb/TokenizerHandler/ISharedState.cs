@@ -12,5 +12,6 @@ namespace dlNetWeb.TokenizerHandler
         public ParseError Error { get; set; }
         public string TemporaryBuffer { get; set; }
         public List<Tokens.BaseToken> Tokens { get; set; }
+        public Int32 CharacterReferenceCode { get; set; }
     }
 }

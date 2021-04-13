@@ -8,6 +8,7 @@ namespace dlNetWeb.TokenizerHandler
     public class CharacterReferenceHandler : BaseHandler<Tokens.BaseToken>
     {
         private readonly Data.NamedCharacterReferenceData _namedCharacterReference = new Data.NamedCharacterReferenceData();
+        private readonly Data.NumericCharacterReferenceData _numericCharacterReferenceData = new Data.NumericCharacterReferenceData();
 
         internal override bool OnRun()
         {
@@ -84,6 +85,7 @@ namespace dlNetWeb.TokenizerHandler
                         }
                         break;
                     case Tokens.State.NumericCharacterReference:
+                        state.CharacterReferenceCode = 0;
                         if (currentInputCharacter.IsLetter())
                         {
                             temporaryBuffer += currentInputCharacter.Span[0];
@@ -120,6 +122,69 @@ namespace dlNetWeb.TokenizerHandler
                             OnChangeState(state.ReturnState);
                         }
                         data.ReadPosition--;
+                        break;
+                    case Tokens.State.HexadecimalCharacterReference:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (currentInputCharacter.IsDigit())
+                        {
+                            state.CharacterReferenceCode *= 16;
+                            state.CharacterReferenceCode += (currentInputCharacter.Digit() - 0x0030);
+                        } else if (currentInputCharacter.UpperHexDigit())
+                        {
+                            state.CharacterReferenceCode *= 16;
+                            state.CharacterReferenceCode += (currentInputCharacter.Hex() - 0x0037);
+                        }
+                        else if (currentInputCharacter.LowerHexDigit())
+                        {
+                            state.CharacterReferenceCode *= 16;
+                            state.CharacterReferenceCode += (currentInputCharacter.Hex() - 0x0057);
+                        }
+                        else if (currentInputCharacter.AnyOf('\u003B'))
+                        {
+                            OnChangeState(Tokens.State.NumericCharacterReferenceEnd);
+                        } else
+                        {
+                            OnSetParseError(ParseError.MissingSemicolonAfterCharacterReference);
+                            data.ReadPosition--;
+                            OnChangeState(Tokens.State.NumericCharacterReferenceEnd);
+                        }
+                        break;
+                    case Tokens.State.DecimalCharacterReference:
+                        currentInputCharacter = data.NextChar(data.ReadPosition++);
+                        if (currentInputCharacter.IsDigit())
+                        {
+                            state.CharacterReferenceCode *= 10;
+                            state.CharacterReferenceCode += (currentInputCharacter.Digit() - 0x0030);
+                        }
+                        else if (currentInputCharacter.AnyOf('\u003B'))
+                        {
+                            OnChangeState(Tokens.State.NumericCharacterReferenceEnd);
+                        } else
+                        {
+                            OnSetParseError(ParseError.MissingSemicolonAfterCharacterReference);
+                            data.ReadPosition--;
+                            OnChangeState(Tokens.State.NumericCharacterReferenceEnd);
+                        }
+                        break;
+                    case Tokens.State.NumericCharacterReferenceEnd:
+                        // TODO: https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state
+                        if (state.CharacterReferenceCode == 0x00)
+                        {
+                            OnSetParseError(ParseError.NullCharacterReference);
+                            state.CharacterReferenceCode = 0xFFFD;
+                        } else if (state.CharacterReferenceCode > 0x10FFFF)
+                        {
+                            OnSetParseError(ParseError.CharacterReferenceOutsideUnicodeRange);
+                            state.CharacterReferenceCode = 0xFFFD;
+                        } else if (state.CharacterReferenceCode.IsSurrogate())
+                        {
+                            OnSetParseError(ParseError.SurrogateCharacterReference);
+                            state.CharacterReferenceCode = 0xFFFD;
+                        }
+                        else if (state.CharacterReferenceCode.IsNonCharacter())
+                        {
+                            OnSetParseError(ParseError.NoncharacterCharacterReference);
+                        }
                         break;
                     default:
                         exitLoop = true; // exit because we switched to an state which we can't handle here

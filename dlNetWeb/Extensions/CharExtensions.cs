@@ -47,5 +47,58 @@ namespace dlNetWeb.Extensions
         {
             return Char.IsDigit(memoryChar.Span[0]);
         }
+
+        public static Int32 Digit(this ReadOnlyMemory<char> memoryChar)
+        {
+            return Int32.Parse(memoryChar.Span[0].ToString());
+        }
+
+        public static bool UpperHexDigit(this ReadOnlyMemory<char> memoryChar)
+        {
+            return memoryChar.Span[0] >= '\u0041' && memoryChar.Span[0] <= '\u0046';
+        }
+
+        public static bool LowerHexDigit(this ReadOnlyMemory<char> memoryChar)
+        {
+            return memoryChar.Span[0] >= '\u0061' && memoryChar.Span[0] <= '\u0066';
+        }
+
+        public static bool UpperAlpha(this ReadOnlyMemory<char> memoryChar)
+        {
+            return memoryChar.Span[0] >= '\u0041' && memoryChar.Span[0] <= '\u005A';
+        }
+
+        public static bool LowerAlpha(this ReadOnlyMemory<char> memoryChar)
+        {
+            return memoryChar.Span[0] >= '\u0061' && memoryChar.Span[0] <= '\u007A';
+        }
+
+        public static int Hex(this ReadOnlyMemory<char> memoryChar)
+        {
+            return Int32.Parse(memoryChar.Span[0].ToString(), System.Globalization.NumberStyles.HexNumber);
+        }
+
+        public static bool IsSurrogate(this ReadOnlyMemory<char> memoryChar)
+        {
+            return Char.IsSurrogate(memoryChar.Span[0]);
+        }
+
+        public static bool IsSurrogate(this Int32 value)
+        {
+            return Char.IsSurrogate((Char)value);
+        }
+
+        public static bool IsNonCharacter(this Int32 value)
+        {
+            var charVal = (Char)value;
+            var compare = new List<char>();
+            compare.Add('\uFDD0');
+            compare.Add('\uFDEF');
+            compare.Add('\uFFFE');
+            compare.Add('\uFFFF');
+            // TODO: https://infra.spec.whatwg.org/#noncharacter
+            return compare.Contains(charVal)
+                || (charVal >= '\uFDD0' && '\uFDD0' <= '\uFDEF');
+        }
     }
 }
