@@ -63,7 +63,7 @@ namespace dlNetWeb.TokenizerHandler
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
                         if (!currentInputCharacter.IsEmpty)
                         {
-                            if (currentInputCharacter.IsLetter())
+                            if (currentInputCharacter.Alpha())
                             {
                                 Token = new Tokens.EndTagToken { TagName = string.Empty };
                                 OnChangeState(Tokens.State.RAWTEXTEndTagName);

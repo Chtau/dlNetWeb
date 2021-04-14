@@ -43,12 +43,7 @@ namespace dlNetWeb.Extensions
             return Char.IsLetter(memoryChar.Span[0]);
         }
 
-        public static bool IsDigit(this ReadOnlyMemory<char> memoryChar)
-        {
-            return Char.IsDigit(memoryChar.Span[0]);
-        }
-
-        public static Int32 Digit(this ReadOnlyMemory<char> memoryChar)
+        public static Int32 ToDigit(this ReadOnlyMemory<char> memoryChar)
         {
             return Int32.Parse(memoryChar.Span[0].ToString());
         }
@@ -63,6 +58,11 @@ namespace dlNetWeb.Extensions
             return memoryChar.Span[0] >= '\u0061' && memoryChar.Span[0] <= '\u0066';
         }
 
+        public static bool Alpha(this ReadOnlyMemory<char> memoryChar)
+        {
+            return memoryChar.UpperAlpha() || memoryChar.LowerAlpha();
+        }
+
         public static bool UpperAlpha(this ReadOnlyMemory<char> memoryChar)
         {
             return memoryChar.Span[0] >= '\u0041' && memoryChar.Span[0] <= '\u005A';
@@ -71,6 +71,16 @@ namespace dlNetWeb.Extensions
         public static bool LowerAlpha(this ReadOnlyMemory<char> memoryChar)
         {
             return memoryChar.Span[0] >= '\u0061' && memoryChar.Span[0] <= '\u007A';
+        }
+
+        public static bool Digit(this ReadOnlyMemory<char> memoryChar)
+        {
+            return memoryChar.Span[0] >= '\u0030' && memoryChar.Span[0] <= '\u0039';
+        }
+
+        public static bool Alphanumeric(this ReadOnlyMemory<char> memoryChar)
+        {
+            return memoryChar.Alpha() || memoryChar.Digit();
         }
 
         public static int Hex(this ReadOnlyMemory<char> memoryChar)
@@ -98,9 +108,45 @@ namespace dlNetWeb.Extensions
                 '\uFFFE',
                 '\uFFFF'
             };
+            var compareString = new List<string>
+            {
+                "\uD83F\uDFFE",
+                "\uD83F\uDFFF",
+                "\uD87F\uDFFE",
+                "\uD87F\uDFFF",
+                "\uD8BF\uDFFE",
+                "\uD8BF\uDFFF",
+                "\uD8FF\uDFFE",
+                "\uD8FF\uDFFF",
+                "\uD93F\uDFFE",
+                "\uD93F\uDFFF",
+                "\uD97F\uDFFE",
+                "\uD97F\uDFFF",
+                "\uD9BF\uDFFE",
+                "\uD9BF\uDFFF",
+                "\uD9FF\uDFFE",
+                "\uD9FF\uDFFF",
+                "\uDA3F\uDFFE",
+                "\uDA3F\uDFFF",
+                "\uDA7F\uDFFE",
+                "\uDA7F\uDFFF",
+                "\uDABF\uDFFE",
+                "\uDABF\uDFFF",
+                "\uDAFF\uDFFE",
+                "\uDAFF\uDFFF",
+                "\uDB3F\uDFFE",
+                "\uDB3F\uDFFF",
+                "\uDB7F\uDFFE",
+                "\uDB7F\uDFFF",
+                "\uDBBF\uDFFE",
+                "\uDBBF\uDFFF",
+                "\uDBFF\uDFFE",
+                "\uDBFF\uDFFF"
+            };
             // TODO: https://infra.spec.whatwg.org/#noncharacter
             return compare.Contains(charVal)
-                || (charVal >= '\uFDD0' && charVal <= '\uFDEF');
+                || (charVal >= '\uFDD0' && charVal <= '\uFDEF')
+                || compareString.Contains(charVal.ToString());
         }
 
         public static bool IsAsciiWhitespace(this Int32 value)

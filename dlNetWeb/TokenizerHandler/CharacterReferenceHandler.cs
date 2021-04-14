@@ -86,7 +86,7 @@ namespace dlNetWeb.TokenizerHandler
                         break;
                     case Tokens.State.NumericCharacterReference:
                         state.CharacterReferenceCode = 0;
-                        if (currentInputCharacter.IsLetter())
+                        if (currentInputCharacter.Alpha())
                         {
                             temporaryBuffer += currentInputCharacter.Span[0];
                             OnChangeState(Tokens.State.HexadecimalCharacterReferenceStart);
@@ -99,7 +99,7 @@ namespace dlNetWeb.TokenizerHandler
                         break;
                     case Tokens.State.HexadecimalCharacterReferenceStart:
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
-                        if (currentInputCharacter.IsLetter())
+                        if (currentInputCharacter.Alpha())
                         {
                             OnChangeState(Tokens.State.HexadecimalCharacterReference);
                         }
@@ -112,7 +112,7 @@ namespace dlNetWeb.TokenizerHandler
                         break;
                     case Tokens.State.DecimalCharacterReferenceStart:
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
-                        if (currentInputCharacter.IsDigit())
+                        if (currentInputCharacter.Digit())
                         {
                             OnChangeState(Tokens.State.DecimalCharacterReference);
                         }
@@ -125,10 +125,10 @@ namespace dlNetWeb.TokenizerHandler
                         break;
                     case Tokens.State.HexadecimalCharacterReference:
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
-                        if (currentInputCharacter.IsDigit())
+                        if (currentInputCharacter.Digit())
                         {
                             state.CharacterReferenceCode *= 16;
-                            state.CharacterReferenceCode += (currentInputCharacter.Digit() - 0x0030);
+                            state.CharacterReferenceCode += (currentInputCharacter.ToDigit() - 0x0030);
                         } else if (currentInputCharacter.UpperHexDigit())
                         {
                             state.CharacterReferenceCode *= 16;
@@ -151,10 +151,10 @@ namespace dlNetWeb.TokenizerHandler
                         break;
                     case Tokens.State.DecimalCharacterReference:
                         currentInputCharacter = data.NextChar(data.ReadPosition++);
-                        if (currentInputCharacter.IsDigit())
+                        if (currentInputCharacter.Digit())
                         {
                             state.CharacterReferenceCode *= 10;
-                            state.CharacterReferenceCode += (currentInputCharacter.Digit() - 0x0030);
+                            state.CharacterReferenceCode += (currentInputCharacter.ToDigit() - 0x0030);
                         }
                         else if (currentInputCharacter.AnyOf('\u003B'))
                         {
