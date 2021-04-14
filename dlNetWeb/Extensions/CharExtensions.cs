@@ -91,14 +91,49 @@ namespace dlNetWeb.Extensions
         public static bool IsNonCharacter(this Int32 value)
         {
             var charVal = (Char)value;
-            var compare = new List<char>();
-            compare.Add('\uFDD0');
-            compare.Add('\uFDEF');
-            compare.Add('\uFFFE');
-            compare.Add('\uFFFF');
+            var compare = new List<char>
+            {
+                '\uFDD0',
+                '\uFDEF',
+                '\uFFFE',
+                '\uFFFF'
+            };
             // TODO: https://infra.spec.whatwg.org/#noncharacter
             return compare.Contains(charVal)
-                || (charVal >= '\uFDD0' && '\uFDD0' <= '\uFDEF');
+                || (charVal >= '\uFDD0' && charVal <= '\uFDEF');
+        }
+
+        public static bool IsAsciiWhitespace(this Int32 value)
+        {
+            var charVal = (Char)value;
+            var compare = new List<char>
+            {
+                '\u0009',
+                '\u000A',
+                '\u000C',
+                '\u000D',
+                '\u0020'
+            };
+            return compare.Contains(charVal);
+        }
+
+        public static bool IsAsciiWhitespace(this ReadOnlyMemory<char> memoryChar)
+        {
+            var compare = new List<char>
+            {
+                '\u0009',
+                '\u000A',
+                '\u000C',
+                '\u000D',
+                '\u0020'
+            };
+            return compare.Contains(memoryChar.Span[0]);
+        }
+
+        public static bool IsControlCodepoint(this Int32 value)
+        {
+            var charVal = (Char)value;
+            return (charVal >= '\u007F' && charVal <= '\u009F');
         }
     }
 }

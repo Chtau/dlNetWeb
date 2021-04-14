@@ -167,7 +167,6 @@ namespace dlNetWeb.TokenizerHandler
                         }
                         break;
                     case Tokens.State.NumericCharacterReferenceEnd:
-                        // TODO: https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state
                         if (state.CharacterReferenceCode == 0x00)
                         {
                             OnSetParseError(ParseError.NullCharacterReference);
@@ -184,7 +183,22 @@ namespace dlNetWeb.TokenizerHandler
                         else if (state.CharacterReferenceCode.IsNonCharacter())
                         {
                             OnSetParseError(ParseError.NoncharacterCharacterReference);
+                        } else
+                        {
+                            if ((state.CharacterReferenceCode == 0x0D || state.CharacterReferenceCode.IsControlCodepoint())
+                                && !state.CharacterReferenceCode.IsAsciiWhitespace())
+                            {
+                                OnSetParseError(ParseError.ControlCharacterReference);
+                            }
+                            if (_numericCharacterReferenceData.NumberCodepoint.ContainsKey(state.CharacterReferenceCode))
+                            {
+                                state.CharacterReferenceCode = _numericCharacterReferenceData.NumberCodepoint[state.CharacterReferenceCode];
+                            }
                         }
+                        state.TemporaryBuffer = string.Empty;
+                        state.TemporaryBuffer += (Char)state.CharacterReferenceCode;
+                        OnFlushCodePoints();
+                        OnChangeState(state.ReturnState);
                         break;
                     default:
                         exitLoop = true; // exit because we switched to an state which we can't handle here

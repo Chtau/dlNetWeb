@@ -69,5 +69,16 @@ namespace dlNetWeb.TokenizerHandler
             });
             return token != null;
         }
+
+        internal void OnFlushCodePoints()
+        {
+            if (state.TemporaryBuffer?.Length > 0)
+            {
+                foreach (var temp in state.TemporaryBuffer)
+                {
+                    OnEmitToken(new Tokens.CharacterToken { Value = temp.ToString() });
+                }
+            }
+        }
     }
 }

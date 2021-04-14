@@ -122,13 +122,7 @@ namespace dlNetWeb.TokenizerHandler
                             {
                                 OnEmitToken(new Tokens.CharacterToken { Value = '\u003C'.ToString() });
                                 OnEmitToken(new Tokens.CharacterToken { Value = '\u002F'.ToString() });
-                                if (state.TemporaryBuffer?.Length > 0)
-                                {
-                                    foreach (var temp in state.TemporaryBuffer)
-                                    {
-                                        OnEmitToken(new Tokens.CharacterToken { Value = temp.ToString() });
-                                    }
-                                }
+                                OnFlushCodePoints();
                                 data.ReadPosition--;
                                 OnChangeState(Tokens.State.RAWTEXT);
                             }
