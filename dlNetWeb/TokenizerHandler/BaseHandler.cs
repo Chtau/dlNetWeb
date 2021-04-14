@@ -80,5 +80,25 @@ namespace dlNetWeb.TokenizerHandler
                 }
             }
         }
+
+        internal bool OnIsPartOfAttribute()
+        {
+            if (state.ReturnState == Tokens.State.AttributeValueDoubleQuoted
+                                    || state.ReturnState == Tokens.State.AttributeValueSingleQuoted
+                                    || state.ReturnState == Tokens.State.AttributeValueUnquoted)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        internal bool OnIsAdjustedCurrentNode()
+        {
+            // TODO: https://html.spec.whatwg.org/multipage/parsing.html#adjusted-current-node
+            return true;
+        }
     }
 }

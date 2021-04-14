@@ -20,6 +20,7 @@ namespace dlNetWeb
         private readonly TokenizerHandler.CDATAHandler _cDATAHandler = new TokenizerHandler.CDATAHandler();
         private readonly TokenizerHandler.RCDATAHandler _rCDATAHandler = new TokenizerHandler.RCDATAHandler();
         private readonly TokenizerHandler.RAWTEXTHandler _rAWTEXTHandler = new TokenizerHandler.RAWTEXTHandler();
+        private readonly TokenizerHandler.SharedHandler _sharedHandler = new TokenizerHandler.SharedHandler();
 
         public ParseError Error => _sharedState.Error;
 
@@ -31,6 +32,10 @@ namespace dlNetWeb
             _attributeHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
             _characterReferenceHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
             _commentHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
+            _cDATAHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
+            _rCDATAHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
+            _rAWTEXTHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
+            _sharedHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
         }
 
         private void OnTokenEmitted(Tokens.BaseToken token)
@@ -47,26 +52,11 @@ namespace dlNetWeb
                 switch (_sharedState.State)
                 {
                     case Tokens.State.Data:
-                        currentInputCharacter = _data.NextChar(_data.ReadPosition++);
-                        if (!currentInputCharacter.IsEmpty)
-                        {
-                            if (currentInputCharacter.Span[0] == '&')
-                            {
-                                _sharedState.ReturnState = Tokens.State.Data;
-                                // Switch state to CharacterReference
-                                _sharedState.State = Tokens.State.CharacterReference;
-                                break;
-                            }
-                            else if (currentInputCharacter.Span[0] == '<')
-                            {
-                                // Switch state to TagOpen
-                                _sharedState.State = Tokens.State.TagOpen;
-                                break;
-                            }
-                        } else
-                        {
+                    case Tokens.State.PLAINTEXT:
+                    case Tokens.State.MarkupDeclarationOpen:
+                    case Tokens.State.AmbiguousAmpersand:
+                        if (_sharedHandler.Run())
                             exitLoop = true;
-                        }
                         break;
                     case Tokens.State.TagOpen:
                     case Tokens.State.EndTagOpen:
@@ -74,33 +64,6 @@ namespace dlNetWeb
                     case Tokens.State.SelfClosingStartTag:
                         if (_tagHandler.Run())
                             exitLoop = true;
-                        break;
-                    case Tokens.State.MarkupDeclarationOpen:
-                        if (_data.NextChar(_data.ReadPosition, 2).ToString() == "--")
-                        {
-                            _data.ReadPosition += 2;
-                            _sharedState.Token = new Tokens.CommantToken
-                            {
-                                Value = string.Empty
-                            };
-                            _sharedState.State = Tokens.State.CommentStart;
-                        } else if (string.Equals("DOCTYPE", _data.NextChar(_data.ReadPosition, 7).ToString(), StringComparison.OrdinalIgnoreCase))
-                        {
-                            _data.ReadPosition += 7;
-                            _sharedState.State = Tokens.State.DOCTYPE;
-                        } else if (string.Equals("[CDATA[", _data.NextChar(_data.ReadPosition, 7)))
-                        {
-                            _data.ReadPosition += 7;
-                            // TODO: handle CDATA
-                        } else
-                        {
-                            _sharedState.Error = ParseError.IncorrectlyOpenedComment;
-                            _sharedState.Token = new Tokens.CommantToken
-                            {
-                                Value = string.Empty
-                            };
-                            _sharedState.State = Tokens.State.BogusComment;
-                        }
                         break;
                     case Tokens.State.DOCTYPE:
                     case Tokens.State.BeforeDOCTYPEName:
@@ -120,30 +83,6 @@ namespace dlNetWeb
                     case Tokens.State.BogusDOCTYPE:
                         if (_docTypeHandler.Run())
                             exitLoop = true;
-                        break;
-                    case Tokens.State.AmbiguousAmpersand:
-                        currentInputCharacter = _data.NextChar(_data.ReadPosition++);
-                        if (!currentInputCharacter.IsEmpty)
-                        {
-                            if (currentInputCharacter.Span[0].IsAlphaNumeric())
-                            {
-                                EmitToken?.Invoke(this, new Tokens.CharacterToken
-                                {
-                                    Value = currentInputCharacter.ToString()
-                                });
-                                break;
-                            } else if (currentInputCharacter.Span[0] == ';')
-                            {
-                                _sharedState.Error = ParseError.UnknownNamedCharacterReference;
-                            }
-                            _sharedState.State = _sharedState.ReturnState;
-                            _data.ReadPosition--; // reconsume in return
-                            break;
-                        }
-                        else
-                        {
-                            exitLoop = true;
-                        }
                         break;
                     case Tokens.State.CharacterReference:
                     case Tokens.State.NamedCharacterReference:
