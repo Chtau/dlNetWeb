@@ -15,7 +15,7 @@ namespace dlNetWeb.Test
             bool isEOF = false;
             tokenizer.EmitToken += (obj, token) =>
             {
-                System.Diagnostics.Debug.Print($"Token Emit: {token}{Environment.NewLine}{Newtonsoft.Json.JsonConvert.SerializeObject(token, Newtonsoft.Json.Formatting.Indented)}");
+                //System.Diagnostics.Debug.Print($"Token Emit: {token}{Environment.NewLine}{Newtonsoft.Json.JsonConvert.SerializeObject(token, Newtonsoft.Json.Formatting.Indented)}");
                 if (token is Tokens.EndOfFileToken)
                     isEOF = true;
             };
@@ -26,6 +26,10 @@ namespace dlNetWeb.Test
             } while (!isEOF);
             if (tokenizer.Error != ParseError.None)
                 System.Diagnostics.Debug.Print($"Tokenizer Parse Error: {tokenizer.Error}");
+            foreach (var token in tokenizer.EmittedTokens)
+            {
+                System.Diagnostics.Debug.Print($"Token Emit: {token}{Environment.NewLine}{Newtonsoft.Json.JsonConvert.SerializeObject(token, Newtonsoft.Json.Formatting.Indented)}");
+            }
         }
     }
 }

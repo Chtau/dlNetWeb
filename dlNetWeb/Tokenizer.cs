@@ -23,6 +23,7 @@ namespace dlNetWeb
         private readonly TokenizerHandler.SharedHandler _sharedHandler = new TokenizerHandler.SharedHandler();
 
         public ParseError Error => _sharedState.Error;
+        public List<Tokens.BaseToken> EmittedTokens => _sharedState.Tokens;
 
         public Tokenizer(string content)
         {

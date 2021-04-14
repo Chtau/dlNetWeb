@@ -120,6 +120,7 @@ namespace dlNetWeb.TokenizerHandler
                         }
                         break;
                     default:
+                        exitLoop = true;
                         break;
                 }
             } while (!exitLoop);
