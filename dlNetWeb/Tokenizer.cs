@@ -10,7 +10,7 @@ namespace dlNetWeb
         public event EventHandler<Tokens.BaseToken> EmitToken;
 
         private readonly Helper.ILogger _logger = new Helper.InternalLogger();
-        private readonly TokenizerHandler.ISharedState _sharedState = new TokenizerHandler.SharedState();
+        private readonly Data.ISharedState _sharedState = new Data.SharedState();
         private readonly TokenizerHandler.IDataSource _data;
         private readonly TokenizerHandler.DocTypeHandler _docTypeHandler = new TokenizerHandler.DocTypeHandler();
         private readonly TokenizerHandler.TagHandler _tagHandler = new TokenizerHandler.TagHandler();
@@ -25,8 +25,9 @@ namespace dlNetWeb
         public ParseError Error => _sharedState.Error;
         public List<Tokens.BaseToken> EmittedTokens => _sharedState.Tokens;
 
-        public Tokenizer(string content)
+        public Tokenizer(string content, Data.ISharedState sharedState)
         {
+            _sharedState = sharedState;
             _data = new TokenizerHandler.DataSourceMemory(content);
             _docTypeHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);
             _tagHandler.Initialize(_data, _logger, _sharedState, OnTokenEmitted);

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using dlNetWeb.Data;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -37,6 +38,7 @@ namespace dlNetWeb.TokenizerHandler
         {
             tokenCallback.Invoke(token);
             state.Tokens.Add(token);
+            state.EmitToken(token);
         }
 
         internal void OnChangeState(Tokens.State eState)
