@@ -12,4 +12,12 @@ namespace dlNetWeb.Elements
         Precustomized,
         Custom
     }
+
+    public enum EventPhase
+    {
+        None = 0,
+        CapturingPhase = 1,
+        AtTarget = 2,
+        BubblingPhase = 3
+    }
 }
