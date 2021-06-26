@@ -16,7 +16,7 @@ namespace dlNetWeb.Elements
 
         }
 
-        public void DispatchEvent(Event _event)
+        public void DispatchEvent(Event eventDispatch)
         {
 
         }
